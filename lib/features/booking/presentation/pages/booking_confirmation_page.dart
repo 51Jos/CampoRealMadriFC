@@ -35,23 +35,76 @@ class BookingConfirmationPage extends StatelessWidget {
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildSuccessHeader(),
-            _buildBookingDetails(),
-            _buildFieldInfo(),
-            _buildActionButtons(context),
-          ],
-        ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildSuccessHeader(constraints.maxWidth),
+                _buildBookingDetails(constraints.maxWidth),
+                _buildFieldInfo(constraints.maxWidth),
+                _buildActionButtons(context, constraints.maxWidth),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSuccessHeader() {
+  // Métodos para dimensiones responsivas
+  double _getHorizontalPadding(double width) {
+    if (width < 360) return 12;
+    if (width < 600) return 16;
+    if (width < 900) return 20;
+    return 24;
+  }
+
+  double _getHeaderPadding(double width) {
+    if (width < 360) return 24;
+    if (width < 600) return 32;
+    return 40;
+  }
+
+  double _getIconSize(double width) {
+    if (width < 360) return 56;
+    if (width < 600) return 64;
+    return 72;
+  }
+
+  double _getTitleFontSize(double width) {
+    if (width < 360) return 24;
+    if (width < 600) return 28;
+    return 32;
+  }
+
+  double _getSubtitleFontSize(double width) {
+    if (width < 360) return 14;
+    if (width < 600) return 16;
+    return 18;
+  }
+
+  double _getSectionTitleSize(double width) {
+    if (width < 360) return 18;
+    if (width < 600) return 20;
+    return 22;
+  }
+
+  double _getBodyFontSize(double width) {
+    if (width < 360) return 14;
+    if (width < 600) return 16;
+    return 16;
+  }
+
+  Widget _buildSuccessHeader(double width) {
+    final padding = _getHeaderPadding(width);
+    final iconSize = _getIconSize(width);
+    final titleSize = _getTitleFontSize(width);
+    final subtitleSize = _getSubtitleFontSize(width);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -65,7 +118,7 @@ class BookingConfirmationPage extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(padding * 0.625),
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -77,28 +130,29 @@ class BookingConfirmationPage extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.check_circle,
               color: AppColors.accent,
-              size: 64,
+              size: iconSize,
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
+          SizedBox(height: padding * 0.75),
+          Text(
             '¡Reserva Confirmada!',
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 28,
+              fontSize: titleSize,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: padding * 0.25),
+          Text(
             'Tu campo ha sido reservado exitosamente',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white70,
-              fontSize: 16,
+              fontSize: subtitleSize,
             ),
           ),
         ],
@@ -106,13 +160,15 @@ class BookingConfirmationPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBookingDetails() {
+  Widget _buildBookingDetails(double width) {
     final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'es');
     final timeFormat = DateFormat('HH:mm');
+    final padding = _getHorizontalPadding(width);
+    final titleSize = _getSectionTitleSize(width);
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.all(padding),
+      padding: EdgeInsets.all(padding * 1.25),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -127,49 +183,57 @@ class BookingConfirmationPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Detalles de la Reserva',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: titleSize,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: padding * 1.25),
           _buildDetailRow(
             Icons.calendar_today,
             'Fecha',
             dateFormat.format(booking.date),
+            width,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
           _buildDetailRow(
             Icons.access_time,
             'Hora',
             '${timeFormat.format(booking.startTime)} - ${timeFormat.format(booking.endTime)}',
+            width,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
           _buildDetailRow(
             Icons.timer,
             'Duración',
             '${booking.durationHours} ${booking.durationHours == 1 ? 'hora' : 'horas'}',
+            width,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
           _buildDetailRow(
             Icons.attach_money,
             'Total',
             'S/ ${booking.totalPrice.toStringAsFixed(2)}',
+            width,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
           _buildDetailRow(
             Icons.confirmation_number,
             'ID de Reserva',
             '#${booking.id.substring(0, 8).toUpperCase()}',
+            width,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String value, double width) {
+    final labelSize = _getSubtitleFontSize(width) - 2;
+    final valueSize = _getBodyFontSize(width);
+
     return Row(
       children: [
         Container(
@@ -192,15 +256,15 @@ class BookingConfirmationPage extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: labelSize,
                   color: Colors.grey.shade600,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 16,
+                style: TextStyle(
+                  fontSize: valueSize,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -211,10 +275,14 @@ class BookingConfirmationPage extends StatelessWidget {
     );
   }
 
-  Widget _buildFieldInfo() {
+  Widget _buildFieldInfo(double width) {
+    final padding = _getHorizontalPadding(width);
+    final titleSize = _getSectionTitleSize(width) - 4;
+    final subtitleSize = _getSubtitleFontSize(width) - 2;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.symmetric(horizontal: padding),
+      padding: EdgeInsets.all(padding * 1.25),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(16),
@@ -226,7 +294,7 @@ class BookingConfirmationPage extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(padding * 0.75),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(12),
@@ -237,23 +305,23 @@ class BookingConfirmationPage extends StatelessWidget {
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 12),
-              const Expanded(
+              SizedBox(width: padding * 0.75),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       fieldName,
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: titleSize,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       'Campo Sintético',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: subtitleSize,
                         color: Colors.grey,
                       ),
                     ),
@@ -262,16 +330,16 @@ class BookingConfirmationPage extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
           Row(
             children: [
               Icon(Icons.location_on, size: 16, color: Colors.grey.shade600),
-              const SizedBox(width: 8),
+              SizedBox(width: padding * 0.5),
               Expanded(
                 child: Text(
                   fieldAddress,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: subtitleSize,
                     color: Colors.grey.shade700,
                   ),
                 ),
@@ -283,9 +351,12 @@ class BookingConfirmationPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, double width) {
+    final padding = _getHorizontalPadding(width);
+    final fontSize = _getBodyFontSize(width);
+
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: Column(
         children: [
           SizedBox(
@@ -301,17 +372,17 @@ class BookingConfirmationPage extends StatelessWidget {
                 elevation: 4,
               ),
               icon: const Icon(Icons.share, color: Colors.white),
-              label: const Text(
+              label: Text(
                 'Compartir por WhatsApp',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: padding * 0.75),
           SizedBox(
             width: double.infinity,
             height: 56,
@@ -324,17 +395,17 @@ class BookingConfirmationPage extends StatelessWidget {
                 ),
               ),
               icon: const Icon(Icons.directions, color: AppColors.primary),
-              label: const Text(
+              label: Text(
                 'Cómo Llegar (Google Maps)',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: padding * 0.75),
           SizedBox(
             width: double.infinity,
             height: 56,
@@ -349,7 +420,7 @@ class BookingConfirmationPage extends StatelessWidget {
               child: Text(
                 'Volver al Inicio',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey.shade700,
                 ),

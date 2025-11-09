@@ -53,14 +53,10 @@ class _HomePageState extends State<HomePage> {
         selectedDate.day == now.day;
 
     return allSlots.where((slot) {
-      // Filtrar solo disponibles
       if (!slot.isAvailable) return false;
-
-      // Si es hoy, filtrar horarios que ya pasaron
       if (isToday && slot.startTime.isBefore(now)) {
         return false;
       }
-
       return true;
     }).toList();
   }
@@ -101,7 +97,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ).then((_) {
-              // Recargar horarios cuando vuelve de la confirmación
               if (mounted) {
                 bloc.add(LoadAvailableTimeSlotsEvent(_selectedDay));
               }
@@ -109,38 +104,93 @@ class _HomePageState extends State<HomePage> {
           }
         },
         builder: (context, state) {
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                _buildCalendar(),
-                if (state is BookingLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  )
-                else if (state is TimeSlotsLoaded) ...[
-                  _buildTimeSlots(state),
-                  if (state.selectedTimeSlotIds.isNotEmpty) _buildPriceInfo(state),
-                  _buildBookButton(state),
-                ],
-              ],
-            ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(constraints.maxWidth),
+                    _buildCalendar(constraints.maxWidth),
+                    if (state is BookingLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      )
+                    else if (state is TimeSlotsLoaded) ...[
+                      _buildTimeSlots(state, constraints.maxWidth),
+                      if (state.selectedTimeSlotIds.isNotEmpty)
+                        _buildPriceInfo(state, constraints.maxWidth),
+                      _buildBookButton(state, constraints.maxWidth),
+                    ],
+                  ],
+                ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget _buildHeader() {
+  // Métodos para dimensiones responsivas
+  double _getHorizontalPadding(double width) {
+    if (width < 360) return 12;
+    if (width < 600) return 16;
+    if (width < 900) return 20;
+    return 24;
+  }
+
+  double _getHeaderIconSize(double width) {
+    if (width < 360) return 28;
+    if (width < 600) return 32;
+    return 36;
+  }
+
+  double _getTitleFontSize(double width) {
+    if (width < 360) return 20;
+    if (width < 600) return 24;
+    return 26;
+  }
+
+  double _getSubtitleFontSize(double width) {
+    if (width < 360) return 12;
+    if (width < 600) return 14;
+    return 15;
+  }
+
+  double _getSectionTitleSize(double width) {
+    if (width < 360) return 16;
+    if (width < 600) return 18;
+    return 20;
+  }
+
+  int _getGridCrossAxisCount(double width) {
+    if (width < 360) return 2; // Móvil muy pequeño: 2 columnas
+    if (width < 600) return 3; // Móvil normal: 3 columnas
+    if (width < 900) return 4; // Tablet: 4 columnas
+    return 5; // Desktop: 5 columnas
+  }
+
+  double _getGridAspectRatio(double width) {
+    if (width < 360) return 1.0;
+    if (width < 600) return 1.2;
+    return 1.3;
+  }
+
+  Widget _buildHeader(double width) {
+    final padding = _getHorizontalPadding(width);
+    final iconSize = _getHeaderIconSize(width);
+    final titleSize = _getTitleFontSize(width);
+    final subtitleSize = _getSubtitleFontSize(width);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -151,57 +201,54 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+          Container(
+            padding: EdgeInsets.all(padding * 0.6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.sports_soccer,
+              color: AppColors.accent,
+              size: iconSize,
+            ),
+          ),
+          SizedBox(width: padding * 0.8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Real Madrid FC',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.sports_soccer,
-                  color: AppColors.accent,
-                  size: 32,
+                SizedBox(height: 4),
+                Text(
+                  'Campo Sintético - Lima',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: subtitleSize,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Real Madrid FC',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Campo Sintético - Lima',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCalendar() {
+  Widget _buildCalendar(double width) {
+    final padding = _getHorizontalPadding(width);
+
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -242,11 +289,11 @@ class _HomePageState extends State<HomePage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        headerStyle: const HeaderStyle(
+        headerStyle: HeaderStyle(
           formatButtonVisible: false,
           titleCentered: true,
           titleTextStyle: TextStyle(
-            fontSize: 18,
+            fontSize: _getSectionTitleSize(width) - 2,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -258,14 +305,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPriceInfo(TimeSlotsLoaded state) {
+  Widget _buildPriceInfo(TimeSlotsLoaded state, double width) {
     final selectedCount = state.selectedTimeSlotIds.length;
     final totalPrice = _calculateTotalPrice(state);
+    final padding = _getHorizontalPadding(width);
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
@@ -282,47 +330,54 @@ class _HomePageState extends State<HomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Horarios seleccionados',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Horarios seleccionados',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: _getSubtitleFontSize(width) - 2,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$selectedCount ${selectedCount == 1 ? 'hora' : 'horas'}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 4),
+                  Text(
+                    '$selectedCount ${selectedCount == 1 ? 'hora' : 'horas'}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: _getSectionTitleSize(width),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  'Total a pagar',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Total a pagar',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: _getSubtitleFontSize(width) - 2,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'S/ $totalPrice',
-                  style: const TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'S/ $totalPrice',
+                      style: TextStyle(
+                        color: AppColors.accent,
+                        fontSize: _getTitleFontSize(width),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -330,12 +385,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildTimeSlots(TimeSlotsLoaded state) {
+  Widget _buildTimeSlots(TimeSlotsLoaded state, double width) {
     final availableSlots = _filterAvailableSlots(state.timeSlots, state.selectedDate);
+    final padding = _getHorizontalPadding(width);
 
     if (availableSlots.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(padding * 2),
         child: Center(
           child: Column(
             children: [
@@ -348,7 +404,7 @@ class _HomePageState extends State<HomePage> {
               Text(
                 'No hay horarios disponibles',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: _getSectionTitleSize(width) - 2,
                   color: Colors.grey.shade600,
                 ),
               ),
@@ -359,46 +415,47 @@ class _HomePageState extends State<HomePage> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: padding),
+          Text(
             'Horarios Disponibles',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: _getSectionTitleSize(width),
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: padding * 0.5),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: padding * 0.75,
+              vertical: padding * 0.5,
+            ),
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.blue.shade200),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Wrap(
+              spacing: padding * 0.75,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Icon(Icons.wb_sunny, size: 14, color: Colors.orange.shade700),
-                const SizedBox(width: 4),
                 Text(
                   'Día: S/50',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: _getSubtitleFontSize(width) - 3,
                     fontWeight: FontWeight.bold,
                     color: Colors.blue.shade700,
                   ),
                 ),
-                const SizedBox(width: 12),
                 Icon(Icons.nightlight_round, size: 14, color: Colors.indigo.shade700),
-                const SizedBox(width: 4),
                 Text(
                   'Noche: S/70',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: _getSubtitleFontSize(width) - 3,
                     fontWeight: FontWeight.bold,
                     color: Colors.blue.shade700,
                   ),
@@ -406,20 +463,20 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: padding * 0.75),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 1.2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _getGridCrossAxisCount(width),
+              childAspectRatio: _getGridAspectRatio(width),
+              crossAxisSpacing: padding * 0.625,
+              mainAxisSpacing: padding * 0.625,
             ),
             itemCount: availableSlots.length,
             itemBuilder: (context, index) {
               final slot = availableSlots[index];
-              return _buildTimeSlotCard(slot, state);
+              return _buildTimeSlotCard(slot, state, width);
             },
           ),
         ],
@@ -427,11 +484,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildTimeSlotCard(TimeSlot slot, TimeSlotsLoaded state) {
+  Widget _buildTimeSlotCard(TimeSlot slot, TimeSlotsLoaded state, double width) {
     final isSelected = state.selectedTimeSlotIds.contains(slot.id);
-    final timeFormat = DateFormat('h:mm a', 'es'); // Formato 12 horas con AM/PM
-
-    // Determinar si es horario nocturno para mostrar indicador
+    final timeFormat = DateFormat('h:mm a', 'es');
     final isNightTime = slot.startTime.hour >= 18;
 
     return GestureDetector(
@@ -476,7 +531,7 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   'S/ ${slot.pricePerHour.toStringAsFixed(0)}',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: _getSubtitleFontSize(width) - 4,
                     fontWeight: FontWeight.bold,
                     color: isSelected ? Colors.white : Colors.grey.shade700,
                   ),
@@ -487,14 +542,14 @@ class _HomePageState extends State<HomePage> {
             Text(
               '${timeFormat.format(slot.startTime)} -',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: _getSubtitleFontSize(width) - 3,
                 color: isSelected ? Colors.white70 : Colors.grey.shade600,
               ),
             ),
             Text(
               timeFormat.format(slot.endTime),
               style: TextStyle(
-                fontSize: 11,
+                fontSize: _getSubtitleFontSize(width) - 3,
                 fontWeight: FontWeight.bold,
                 color: isSelected ? Colors.white : Colors.black87,
               ),
@@ -505,11 +560,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildBookButton(TimeSlotsLoaded state) {
+  Widget _buildBookButton(TimeSlotsLoaded state, double width) {
     final canBook = state.selectedTimeSlotIds.isNotEmpty;
+    final padding = _getHorizontalPadding(width);
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: SizedBox(
         width: double.infinity,
         height: 56,
@@ -518,7 +574,6 @@ class _HomePageState extends State<HomePage> {
               ? () {
                   final authState = context.read<AuthBloc>().state;
                   if (authState is AuthAuthenticated) {
-                    // Obtener el primer horario seleccionado (el más temprano)
                     final firstSlot = state.timeSlots.firstWhere(
                       (slot) => slot.id == state.selectedTimeSlotIds.first,
                     );
@@ -545,7 +600,7 @@ class _HomePageState extends State<HomePage> {
           child: Text(
             canBook ? 'Reservar Ahora' : 'Selecciona horarios',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: _getSectionTitleSize(width) - 2,
               fontWeight: FontWeight.bold,
               color: canBook ? Colors.white : Colors.grey.shade500,
             ),

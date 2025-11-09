@@ -3,6 +3,8 @@ import 'package:equatable/equatable.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/sign_in_usecase.dart';
 import '../../domain/usecases/sign_up_usecase.dart';
+import '../../domain/usecases/update_profile_usecase.dart';
+import '../../domain/usecases/change_password_usecase.dart';
 import '../../domain/repositories/auth_repository.dart';
 
 // Events
@@ -49,6 +51,34 @@ class SignOutRequested extends AuthEvent {}
 
 class CheckAuthStatus extends AuthEvent {}
 
+class UpdateProfileRequested extends AuthEvent {
+  final String name;
+  final String? phone;
+  final String? photoUrl;
+
+  const UpdateProfileRequested({
+    required this.name,
+    this.phone,
+    this.photoUrl,
+  });
+
+  @override
+  List<Object?> get props => [name, phone, photoUrl];
+}
+
+class ChangePasswordRequested extends AuthEvent {
+  final String currentPassword;
+  final String newPassword;
+
+  const ChangePasswordRequested({
+    required this.currentPassword,
+    required this.newPassword,
+  });
+
+  @override
+  List<Object?> get props => [currentPassword, newPassword];
+}
+
 // States
 abstract class AuthState extends Equatable {
   const AuthState();
@@ -81,21 +111,46 @@ class AuthError extends AuthState {
   List<Object?> get props => [message];
 }
 
+class ProfileUpdateSuccess extends AuthState {
+  final UserEntity user;
+  final String message;
+
+  const ProfileUpdateSuccess(this.user, this.message);
+
+  @override
+  List<Object?> get props => [user, message];
+}
+
+class PasswordChangeSuccess extends AuthState {
+  final String message;
+
+  const PasswordChangeSuccess(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+
 // Bloc
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignInUseCase signInUseCase;
   final SignUpUseCase signUpUseCase;
+  final UpdateProfileUseCase updateProfileUseCase;
+  final ChangePasswordUseCase changePasswordUseCase;
   final AuthRepository authRepository;
 
   AuthBloc({
     required this.signInUseCase,
     required this.signUpUseCase,
+    required this.updateProfileUseCase,
+    required this.changePasswordUseCase,
     required this.authRepository,
   }) : super(AuthInitial()) {
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
     on<SignOutRequested>(_onSignOutRequested);
     on<CheckAuthStatus>(_onCheckAuthStatus);
+    on<UpdateProfileRequested>(_onUpdateProfileRequested);
+    on<ChangePasswordRequested>(_onChangePasswordRequested);
   }
 
   Future<void> _onSignInRequested(
@@ -164,6 +219,41 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(AuthUnauthenticated());
         }
       },
+    );
+  }
+
+  Future<void> _onUpdateProfileRequested(
+    UpdateProfileRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+
+    final result = await updateProfileUseCase(
+      name: event.name,
+      phone: event.phone,
+      photoUrl: event.photoUrl,
+    );
+
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (user) => emit(ProfileUpdateSuccess(user, 'Perfil actualizado exitosamente')),
+    );
+  }
+
+  Future<void> _onChangePasswordRequested(
+    ChangePasswordRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+
+    final result = await changePasswordUseCase(
+      currentPassword: event.currentPassword,
+      newPassword: event.newPassword,
+    );
+
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(const PasswordChangeSuccess('Contraseña cambiada exitosamente')),
     );
   }
 }

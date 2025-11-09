@@ -32,4 +32,17 @@ abstract class AuthRepository {
 
   /// Envía un correo para restablecer la contraseña
   Future<Either<Failure, void>> resetPassword(String email);
+
+  /// Actualiza el perfil del usuario
+  Future<Either<Failure, UserEntity>> updateProfile({
+    required String name,
+    String? phone,
+    String? photoUrl,
+  });
+
+  /// Cambia la contraseña del usuario
+  Future<Either<Failure, void>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
 }

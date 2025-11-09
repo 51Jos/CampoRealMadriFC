@@ -10,6 +10,8 @@ import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/sign_in_usecase.dart';
 import '../../features/auth/domain/usecases/sign_up_usecase.dart';
 import '../../features/auth/domain/usecases/sign_out_usecase.dart';
+import '../../features/auth/domain/usecases/update_profile_usecase.dart';
+import '../../features/auth/domain/usecases/change_password_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/booking/data/datasources/booking_remote_datasource.dart';
 import '../../features/booking/data/repositories/booking_repository_impl.dart';
@@ -63,12 +65,16 @@ Future<void> initializeDependencies() async {
   sl.registerLazySingleton(() => SignInUseCase(sl()));
   sl.registerLazySingleton(() => SignUpUseCase(sl()));
   sl.registerLazySingleton(() => SignOutUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateProfileUseCase(sl()));
+  sl.registerLazySingleton(() => ChangePasswordUseCase(sl()));
 
   // BLoC
   sl.registerFactory(
     () => AuthBloc(
       signInUseCase: sl(),
       signUpUseCase: sl(),
+      updateProfileUseCase: sl(),
+      changePasswordUseCase: sl(),
       authRepository: sl(),
     ),
   );

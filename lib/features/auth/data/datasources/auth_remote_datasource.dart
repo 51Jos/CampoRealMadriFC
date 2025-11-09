@@ -23,6 +23,17 @@ abstract class AuthRemoteDataSource {
   Future<UserModel?> getCurrentUser();
 
   Future<void> resetPassword(String email);
+
+  Future<UserModel> updateProfile({
+    required String name,
+    String? phone,
+    String? photoUrl,
+  });
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -190,6 +201,78 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       await firebaseAuth.sendPasswordResetEmail(email: email);
     } catch (e) {
       throw Exception('Error al enviar correo de recuperación: $e');
+    }
+  }
+
+  @override
+  Future<UserModel> updateProfile({
+    required String name,
+    String? phone,
+    String? photoUrl,
+  }) async {
+    try {
+      final user = firebaseAuth.currentUser;
+      if (user == null) {
+        throw Exception('Usuario no autenticado');
+      }
+
+      // Actualizar en Firebase Auth
+      await user.updateDisplayName(name);
+      if (photoUrl != null) {
+        await user.updatePhotoURL(photoUrl);
+      }
+
+      // Actualizar en Firestore
+      await firestore.collection('users').doc(user.uid).update({
+        'name': name,
+        'phone': phone,
+        'photoUrl': photoUrl ?? user.photoURL,
+      });
+
+      // Obtener el usuario actualizado
+      final userDoc = await firestore.collection('users').doc(user.uid).get();
+      final data = userDoc.data()!;
+
+      return UserModel(
+        id: user.uid,
+        email: user.email!,
+        name: data['name'] ?? name,
+        phone: data['phone'] as String?,
+        photoUrl: data['photoUrl'] ?? user.photoURL,
+        acceptTerms: data['acceptTerms'] as bool? ?? false,
+        createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      );
+    } catch (e) {
+      throw Exception('Error al actualizar perfil: $e');
+    }
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final user = firebaseAuth.currentUser;
+      if (user == null || user.email == null) {
+        throw Exception('Usuario no autenticado');
+      }
+
+      // Re-autenticar al usuario con su contraseña actual
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Cambiar la contraseña
+      await user.updatePassword(newPassword);
+    } catch (e) {
+      if (e.toString().contains('wrong-password') ||
+          e.toString().contains('invalid-credential')) {
+        throw Exception('La contraseña actual es incorrecta');
+      }
+      throw Exception('Error al cambiar contraseña: $e');
     }
   }
 }

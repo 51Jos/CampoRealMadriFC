@@ -54,7 +54,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             );
             setState(() => _isEditMode = false);
-            // Actualizar el estado de autenticación
             context.read<AuthBloc>().add(CheckAuthStatus());
           } else if (state is PasswordChangeSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -86,22 +85,31 @@ class _ProfilePageState extends State<ProfilePage> {
             _phoneController.text = user.phone ?? '';
             _emailController.text = user.email;
 
-            return CustomScrollView(
-              slivers: [
-                _buildAppBar(context, user.name),
-                SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      _buildProfileHeader(user.name, user.email, user.photoUrl),
-                      const SizedBox(height: 24),
-                      _buildProfileForm(),
-                      const SizedBox(height: 16),
-                      _buildMenuSection(context),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-              ],
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                return CustomScrollView(
+                  slivers: [
+                    _buildAppBar(context, user.name, constraints.maxWidth),
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          _buildProfileHeader(
+                            user.name,
+                            user.email,
+                            user.photoUrl,
+                            constraints.maxWidth,
+                          ),
+                          SizedBox(height: _getSpacing(constraints.maxWidth, 24)),
+                          _buildProfileForm(constraints.maxWidth),
+                          SizedBox(height: _getSpacing(constraints.maxWidth, 16)),
+                          _buildMenuSection(context, constraints.maxWidth),
+                          SizedBox(height: _getSpacing(constraints.maxWidth, 24)),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             );
           }
 
@@ -113,18 +121,78 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context, String userName) {
+  // Métodos para dimensiones responsivas
+  double _getHorizontalPadding(double width) {
+    if (width < 360) return 12;
+    if (width < 600) return 16;
+    if (width < 900) return 20;
+    return 24;
+  }
+
+  double _getAppBarHeight(double width) {
+    if (width < 360) return 100;
+    if (width < 600) return 120;
+    return 140;
+  }
+
+  double _getAvatarSize(double width) {
+    if (width < 360) return 100;
+    if (width < 600) return 120;
+    if (width < 900) return 140;
+    return 150;
+  }
+
+  double _getTitleFontSize(double width) {
+    if (width < 360) return 20;
+    if (width < 600) return 24;
+    return 26;
+  }
+
+  double _getSubtitleFontSize(double width) {
+    if (width < 360) return 14;
+    if (width < 600) return 16;
+    return 17;
+  }
+
+  double _getSectionTitleSize(double width) {
+    if (width < 360) return 16;
+    if (width < 600) return 18;
+    return 20;
+  }
+
+  double _getBodyFontSize(double width) {
+    if (width < 360) return 14;
+    if (width < 600) return 16;
+    return 16;
+  }
+
+  double _getButtonFontSize(double width) {
+    if (width < 360) return 13;
+    if (width < 600) return 14;
+    return 15;
+  }
+
+  double _getSpacing(double width, double baseSpacing) {
+    if (width < 360) return baseSpacing * 0.75;
+    if (width < 600) return baseSpacing;
+    return baseSpacing * 1.1;
+  }
+
+  Widget _buildAppBar(BuildContext context, String userName, double width) {
+    final appBarHeight = _getAppBarHeight(width);
+
     return SliverAppBar(
-      expandedHeight: 120,
+      expandedHeight: appBarHeight,
       pinned: true,
       backgroundColor: AppColors.primary,
       automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
           _isEditMode ? 'Editar Perfil' : 'Mi Perfil',
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+            fontSize: _getBodyFontSize(width),
           ),
         ),
         background: Container(
@@ -146,9 +214,12 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () {
               setState(() => _isEditMode = false);
             },
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: _getButtonFontSize(width),
+              ),
             ),
           )
         else
@@ -162,16 +233,26 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildProfileHeader(String name, String email, String? photoUrl) {
+  Widget _buildProfileHeader(
+    String name,
+    String email,
+    String? photoUrl,
+    double width,
+  ) {
+    final padding = _getHorizontalPadding(width);
+    final avatarSize = _getAvatarSize(width);
+    final titleSize = _getTitleFontSize(width);
+    final subtitleSize = _getSubtitleFontSize(width);
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(padding),
       child: Column(
         children: [
           Stack(
             children: [
               Container(
-                width: 120,
-                height: 120,
+                width: avatarSize,
+                height: avatarSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -192,22 +273,22 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 child: photoUrl != null
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(60),
+                        borderRadius: BorderRadius.circular(avatarSize / 2),
                         child: Image.network(
                           photoUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
+                            return Icon(
                               Icons.person,
-                              size: 60,
+                              size: avatarSize * 0.5,
                               color: Colors.white,
                             );
                           },
                         ),
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.person,
-                        size: 60,
+                        size: avatarSize * 0.5,
                         color: Colors.white,
                       ),
               ),
@@ -216,7 +297,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(padding * 0.5),
                     decoration: BoxDecoration(
                       color: AppColors.secondary,
                       shape: BoxShape.circle,
@@ -227,30 +308,32 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ],
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.camera_alt,
-                      size: 20,
+                      size: padding,
                       color: Colors.white,
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
           if (!_isEditMode) ...[
             Text(
               name,
-              style: const TextStyle(
-                fontSize: 24,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: titleSize,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: padding * 0.25),
             Text(
               email,
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: subtitleSize,
                 color: Colors.grey.shade600,
               ),
             ),
@@ -260,10 +343,13 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildProfileForm() {
+  Widget _buildProfileForm(double width) {
+    final padding = _getHorizontalPadding(width);
+    final titleSize = _getSectionTitleSize(width);
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.symmetric(horizontal: padding),
+      padding: EdgeInsets.all(padding * 1.25),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -280,15 +366,15 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Información Personal',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: titleSize,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: padding * 1.25),
             CustomTextField(
               label: 'Nombre Completo',
               controller: _nameController,
@@ -301,7 +387,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: padding),
             CustomTextField(
               label: 'Correo Electrónico',
               controller: _emailController,
@@ -309,7 +395,7 @@ class _ProfilePageState extends State<ProfilePage> {
               prefixIcon: const Icon(Icons.email_outlined),
               keyboardType: TextInputType.emailAddress,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: padding),
             CustomTextField(
               label: 'Teléfono',
               controller: _phoneController,
@@ -318,7 +404,7 @@ class _ProfilePageState extends State<ProfilePage> {
               keyboardType: TextInputType.phone,
             ),
             if (_isEditMode) ...[
-              const SizedBox(height: 24),
+              SizedBox(height: padding * 1.5),
               SizedBox(
                 width: double.infinity,
                 child: BlocBuilder<AuthBloc, AuthState>(
@@ -340,9 +426,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildMenuSection(BuildContext context) {
+  Widget _buildMenuSection(BuildContext context, double width) {
+    final padding = _getHorizontalPadding(width);
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: EdgeInsets.symmetric(horizontal: padding),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -360,28 +448,27 @@ class _ProfilePageState extends State<ProfilePage> {
             icon: Icons.lock_outline,
             title: 'Cambiar Contraseña',
             subtitle: 'Actualiza tu contraseña',
-            onTap: () => _showChangePasswordDialog(context),
+            onTap: () => _showChangePasswordDialog(context, width),
             iconColor: AppColors.primary,
+            width: width,
           ),
           const Divider(height: 1),
           _buildMenuItem(
             icon: Icons.info_outline,
             title: 'Acerca de',
             subtitle: 'Versión 1.0.0',
-            onTap: () {
-              // TODO: Implementar
-            },
+            onTap: () {},
             iconColor: Colors.blue,
+            width: width,
           ),
           const Divider(height: 1),
           _buildMenuItem(
             icon: Icons.help_outline,
             title: 'Ayuda y Soporte',
             subtitle: 'Obtén ayuda',
-            onTap: () {
-              // TODO: Implementar
-            },
+            onTap: () {},
             iconColor: Colors.orange,
+            width: width,
           ),
           const Divider(height: 1),
           _buildMenuItem(
@@ -391,6 +478,7 @@ class _ProfilePageState extends State<ProfilePage> {
             titleColor: Colors.red,
             iconColor: Colors.red,
             onTap: () => _showLogoutDialog(context),
+            width: width,
           ),
         ],
       ),
@@ -404,23 +492,35 @@ class _ProfilePageState extends State<ProfilePage> {
     required VoidCallback onTap,
     Color? titleColor,
     Color? iconColor,
+    required double width,
   }) {
+    final padding = _getHorizontalPadding(width);
+    final titleSize = _getBodyFontSize(width);
+    final subtitleSize = _getButtonFontSize(width);
+
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: padding * 1.25,
+        vertical: padding * 0.5,
+      ),
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(padding * 0.5),
         decoration: BoxDecoration(
           color: (iconColor ?? Colors.grey).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: iconColor ?? Colors.grey.shade700, size: 24),
+        child: Icon(
+          icon,
+          color: iconColor ?? Colors.grey.shade700,
+          size: 24,
+        ),
       ),
       title: Text(
         title,
         style: TextStyle(
           color: titleColor ?? Colors.black87,
           fontWeight: FontWeight.w600,
-          fontSize: 16,
+          fontSize: titleSize,
         ),
       ),
       subtitle: subtitle != null
@@ -428,7 +528,7 @@ class _ProfilePageState extends State<ProfilePage> {
               subtitle,
               style: TextStyle(
                 color: Colors.grey.shade600,
-                fontSize: 14,
+                fontSize: subtitleSize,
               ),
             )
           : null,
@@ -450,121 +550,128 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _showChangePasswordDialog(BuildContext context) {
+  void _showChangePasswordDialog(BuildContext context, double width) {
+    final authBloc = context.read<AuthBloc>();
+    final padding = _getHorizontalPadding(width);
+    final titleSize = _getSectionTitleSize(width);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Cambiar Contraseña',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+      builder: (modalContext) => BlocProvider.value(
+        value: authBloc,
+        child: Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(padding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Cambiar Contraseña',
+                      style: TextStyle(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              CustomTextField(
-                label: 'Contraseña Actual',
-                controller: _currentPasswordController,
-                obscureText: _obscureCurrentPassword,
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscureCurrentPassword
-                        ? Icons.visibility_off
-                        : Icons.visibility,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscureCurrentPassword = !_obscureCurrentPassword;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                label: 'Nueva Contraseña',
-                controller: _newPasswordController,
-                obscureText: _obscureNewPassword,
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscureNewPassword
-                        ? Icons.visibility_off
-                        : Icons.visibility,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscureNewPassword = !_obscureNewPassword;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                label: 'Confirmar Nueva Contraseña',
-                controller: _confirmPasswordController,
-                obscureText: _obscureConfirmPassword,
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscureConfirmPassword
-                        ? Icons.visibility_off
-                        : Icons.visibility,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscureConfirmPassword = !_obscureConfirmPassword;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-              BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, state) {
-                  final isLoading = state is AuthLoading;
-                  return SizedBox(
-                    width: double.infinity,
-                    child: CustomButton(
-                      text: isLoading ? 'Cambiando...' : 'Cambiar Contraseña',
-                      onPressed: isLoading ? null : _changePassword,
-                      backgroundColor: AppColors.primary,
-                      icon: Icons.check,
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(modalContext),
                     ),
-                  );
-                },
-              ),
-            ],
+                  ],
+                ),
+                SizedBox(height: padding * 1.25),
+                CustomTextField(
+                  label: 'Contraseña Actual',
+                  controller: _currentPasswordController,
+                  obscureText: _obscureCurrentPassword,
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureCurrentPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureCurrentPassword = !_obscureCurrentPassword;
+                      });
+                    },
+                  ),
+                ),
+                SizedBox(height: padding),
+                CustomTextField(
+                  label: 'Nueva Contraseña',
+                  controller: _newPasswordController,
+                  obscureText: _obscureNewPassword,
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureNewPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureNewPassword = !_obscureNewPassword;
+                      });
+                    },
+                  ),
+                ),
+                SizedBox(height: padding),
+                CustomTextField(
+                  label: 'Confirmar Nueva Contraseña',
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
+                  ),
+                ),
+                SizedBox(height: padding * 1.5),
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (blocContext, state) {
+                    final isLoading = state is AuthLoading;
+                    return SizedBox(
+                      width: double.infinity,
+                      child: CustomButton(
+                        text: isLoading ? 'Cambiando...' : 'Cambiar Contraseña',
+                        onPressed: isLoading ? null : () => _changePassword(blocContext),
+                        backgroundColor: AppColors.primary,
+                        icon: Icons.check,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _changePassword() {
+  void _changePassword(BuildContext context) {
     if (_newPasswordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

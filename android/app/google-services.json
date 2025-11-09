@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "295507185595",
+    "project_id": "sintetico-lima",
+    "storage_bucket": "sintetico-lima.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:295507185595:android:faf3270be4d0b489133e9e",
+        "android_client_info": {
+          "package_name": "com.example.sinteticolima"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9qvXDp3-vQzCLlEpaZ-es4WII_kIV_nI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

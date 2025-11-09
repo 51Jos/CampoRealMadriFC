@@ -451,11 +451,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showChangePasswordDialog(BuildContext context) {
+    final authBloc = context.read<AuthBloc>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (modalContext) => BlocProvider.value(
+        value: authBloc,
+        child: Container(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
@@ -481,7 +484,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(modalContext),
                   ),
                 ],
               ),
@@ -544,13 +547,13 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 24),
               BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, state) {
+                builder: (blocContext, state) {
                   final isLoading = state is AuthLoading;
                   return SizedBox(
                     width: double.infinity,
                     child: CustomButton(
                       text: isLoading ? 'Cambiando...' : 'Cambiar Contraseña',
-                      onPressed: isLoading ? null : _changePassword,
+                      onPressed: isLoading ? null : () => _changePassword(blocContext),
                       backgroundColor: AppColors.primary,
                       icon: Icons.check,
                     ),
@@ -560,11 +563,12 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
 
-  void _changePassword() {
+  void _changePassword(BuildContext context) {
     if (_newPasswordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

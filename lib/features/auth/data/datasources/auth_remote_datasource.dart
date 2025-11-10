@@ -73,6 +73,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
             phone: data['phone'] as String?,
             photoUrl: data['photoUrl'] ?? user.photoURL,
             acceptTerms: data['acceptTerms'] as bool? ?? false,
+            isAdmin: data['isAdmin'] as bool? ?? false,
             createdAt: (data['createdAt'] as Timestamp?)?.toDate() ??
                       user.metadata.creationTime ??
                       DateTime.now(),
@@ -89,6 +90,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         phone: null,
         photoUrl: user.photoURL,
         acceptTerms: false,
+        isAdmin: false,
         createdAt: user.metadata.creationTime ?? DateTime.now(),
       );
     } catch (e) {
@@ -136,6 +138,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'phone': phone,
         'photoUrl': user.photoURL,
         'acceptTerms': acceptTerms,
+        'isAdmin': false,
         'createdAt': Timestamp.fromDate(userModel.createdAt),
       });
 
@@ -172,6 +175,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
             phone: data['phone'] as String?,
             photoUrl: data['photoUrl'] ?? user.photoURL,
             acceptTerms: data['acceptTerms'] as bool? ?? false,
+            isAdmin: data['isAdmin'] as bool? ?? false,
             createdAt: (data['createdAt'] as Timestamp?)?.toDate() ??
                       user.metadata.creationTime ??
                       DateTime.now(),
@@ -188,6 +192,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         phone: null,
         photoUrl: user.photoURL,
         acceptTerms: false,
+        isAdmin: false,
         createdAt: user.metadata.creationTime ?? DateTime.now(),
       );
     } catch (e) {
@@ -240,6 +245,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         phone: data['phone'] as String?,
         photoUrl: data['photoUrl'] ?? user.photoURL,
         acceptTerms: data['acceptTerms'] as bool? ?? false,
+        isAdmin: data['isAdmin'] as bool? ?? false,
         createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       );
     } catch (e) {

@@ -96,4 +96,52 @@ class BookingRepositoryImpl implements BookingRepository {
       return Left(ServerFailure(message: e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, List<Booking>>> getAllBookings() async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final bookings = await remoteDataSource.getAllBookings();
+      return Right(bookings);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Booking>> confirmBooking(String bookingId) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final booking = await remoteDataSource.confirmBooking(bookingId);
+      return Right(booking);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Booking>> rejectBooking({
+    required String bookingId,
+    required String reason,
+  }) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final booking = await remoteDataSource.rejectBooking(
+        bookingId: bookingId,
+        reason: reason,
+      );
+      return Right(booking);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
 }

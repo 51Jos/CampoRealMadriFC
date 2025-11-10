@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/network_info.dart';
+import '../../features/admin/presentation/bloc/admin_bloc.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -17,9 +18,12 @@ import '../../features/booking/data/datasources/booking_remote_datasource.dart';
 import '../../features/booking/data/repositories/booking_repository_impl.dart';
 import '../../features/booking/domain/repositories/booking_repository.dart';
 import '../../features/booking/domain/usecases/cancel_booking.dart';
+import '../../features/booking/domain/usecases/confirm_booking_usecase.dart';
 import '../../features/booking/domain/usecases/create_booking.dart';
+import '../../features/booking/domain/usecases/get_all_bookings_usecase.dart';
 import '../../features/booking/domain/usecases/get_available_time_slots.dart';
 import '../../features/booking/domain/usecases/get_user_bookings.dart';
+import '../../features/booking/domain/usecases/reject_booking_usecase.dart';
 import '../../features/booking/presentation/bloc/booking_bloc.dart';
 import '../../shared/services/storage_service.dart';
 
@@ -102,6 +106,11 @@ Future<void> initializeDependencies() async {
   sl.registerLazySingleton(() => GetUserBookings(sl()));
   sl.registerLazySingleton(() => CancelBooking(sl()));
 
+  // Admin Use cases
+  sl.registerLazySingleton(() => GetAllBookingsUseCase(sl()));
+  sl.registerLazySingleton(() => ConfirmBookingUseCase(sl()));
+  sl.registerLazySingleton(() => RejectBookingUseCase(sl()));
+
   // BLoC
   sl.registerFactory(
     () => BookingBloc(
@@ -109,6 +118,19 @@ Future<void> initializeDependencies() async {
       createBooking: sl(),
       getUserBookings: sl(),
       cancelBooking: sl(),
+    ),
+  );
+
+  // ============================================================================
+  // FEATURE: ADMIN
+  // ============================================================================
+
+  // BLoC
+  sl.registerFactory(
+    () => AdminBloc(
+      getAllBookingsUseCase: sl(),
+      confirmBookingUseCase: sl(),
+      rejectBookingUseCase: sl(),
     ),
   );
 }

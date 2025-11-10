@@ -10,6 +10,10 @@ class Booking extends Equatable {
   final double totalPrice;
   final BookingStatus status;
   final DateTime createdAt;
+  final String? rejectionReason;
+  final String? userName;
+  final String? userPhone;
+  final String? userEmail;
 
   const Booking({
     required this.id,
@@ -20,6 +24,10 @@ class Booking extends Equatable {
     required this.totalPrice,
     required this.status,
     required this.createdAt,
+    this.rejectionReason,
+    this.userName,
+    this.userPhone,
+    this.userEmail,
   });
 
   DateTime get endTime => startTime.add(Duration(hours: durationHours));
@@ -34,6 +42,10 @@ class Booking extends Equatable {
         totalPrice,
         status,
         createdAt,
+        rejectionReason,
+        userName,
+        userPhone,
+        userEmail,
       ];
 }
 

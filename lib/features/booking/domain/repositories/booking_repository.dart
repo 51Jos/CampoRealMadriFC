@@ -24,4 +24,18 @@ abstract class BookingRepository {
 
   /// Obtiene los detalles de una reserva
   Future<Either<Failure, Booking>> getBookingById(String bookingId);
+
+  // Métodos de administrador
+
+  /// Obtiene todas las reservas (solo admin)
+  Future<Either<Failure, List<Booking>>> getAllBookings();
+
+  /// Confirma una reserva (solo admin)
+  Future<Either<Failure, Booking>> confirmBooking(String bookingId);
+
+  /// Rechaza una reserva con motivo (solo admin)
+  Future<Either<Failure, Booking>> rejectBooking({
+    required String bookingId,
+    required String reason,
+  });
 }

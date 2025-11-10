@@ -12,6 +12,10 @@ class BookingModel extends Booking {
     required super.totalPrice,
     required super.status,
     required super.createdAt,
+    super.rejectionReason,
+    super.userName,
+    super.userPhone,
+    super.userEmail,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +31,10 @@ class BookingModel extends Booking {
         orElse: () => BookingStatus.pending,
       ),
       createdAt: (json['createdAt'] as Timestamp).toDate(),
+      rejectionReason: json['rejectionReason'] as String?,
+      userName: json['userName'] as String?,
+      userPhone: json['userPhone'] as String?,
+      userEmail: json['userEmail'] as String?,
     );
   }
 
@@ -40,6 +48,10 @@ class BookingModel extends Booking {
       'totalPrice': totalPrice,
       'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
+      'rejectionReason': rejectionReason,
+      'userName': userName,
+      'userPhone': userPhone,
+      'userEmail': userEmail,
     };
   }
 }

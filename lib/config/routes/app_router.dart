@@ -1,5 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/admin/presentation/bloc/admin_bloc.dart';
+import '../../features/admin/presentation/bloc/admin_event.dart';
+import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
+import '../../features/admin/presentation/pages/admin_login_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -14,6 +18,8 @@ class AppRouter {
   static const String login = '/login';
   static const String register = '/register';
   static const String home = '/home';
+  static const String adminLogin = '/admin/login';
+  static const String adminDashboard = '/admin/dashboard';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -51,6 +57,25 @@ class AppRouter {
             BlocProvider(create: (context) => sl<BookingBloc>()),
           ],
           child: const MainNavigationPage(),
+        ),
+      ),
+      GoRoute(
+        path: adminLogin,
+        name: 'adminLogin',
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<AuthBloc>(),
+          child: const AdminLoginPage(),
+        ),
+      ),
+      GoRoute(
+        path: adminDashboard,
+        name: 'adminDashboard',
+        builder: (context, state) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => sl<AuthBloc>()..add(CheckAuthStatus())),
+            BlocProvider(create: (context) => sl<AdminBloc>()..add(const LoadAllBookingsEvent())),
+          ],
+          child: const AdminDashboardPage(),
         ),
       ),
     ],

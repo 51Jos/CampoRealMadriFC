@@ -9,7 +9,16 @@
       "Bash(if not exist \"src\\images\" mkdir srcimages)",
       "Bash(if not exist srcimages mkdir srcimages)",
       "Bash(flutter build:*)",
-      "Bash(flutter run:*)"
+      "Bash(flutter run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nRefactor: Implementar diseño totalmente responsivo con arquitectura por componentes\n\n- Refactorizar módulo de reservas con arquitectura por componentes\n- Reducir bookings_history_page.dart de 1448 a 438 líneas (70% de reducción)\n- Crear 7 componentes reutilizables para bookings\n- Implementar NavigationRail lateral para desktop\n- Agregar MaxWidthContainer con límite de 1400px en desktop\n- Separar layouts móvil y desktop con ResponsiveLayout widget\n- Implementar Master-Detail pattern para pantallas grandes\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push)",
+      "Bash(taskkill:*)",
+      "Bash(flutter clean:*)",
+      "Bash(clip)",
+      "Bash(timeout 30 bash:*)",
+      "Bash(if exist nul del nul)",
+      "Bash(.gitignore)"
     ],
     "deny": [],
     "ask": []

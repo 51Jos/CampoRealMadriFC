@@ -10,6 +10,7 @@ class UserModel extends UserEntity {
     super.phone,
     super.photoUrl,
     required super.acceptTerms,
+    super.isAdmin = false,
     required super.createdAt,
   });
 
@@ -22,6 +23,7 @@ class UserModel extends UserEntity {
       phone: json['phone'] as String?,
       photoUrl: json['photoUrl'] as String?,
       acceptTerms: json['acceptTerms'] as bool? ?? false,
+      isAdmin: json['isAdmin'] as bool? ?? false,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
@@ -35,6 +37,7 @@ class UserModel extends UserEntity {
       'phone': phone,
       'photoUrl': photoUrl,
       'acceptTerms': acceptTerms,
+      'isAdmin': isAdmin,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -48,6 +51,7 @@ class UserModel extends UserEntity {
       phone: entity.phone,
       photoUrl: entity.photoUrl,
       acceptTerms: entity.acceptTerms,
+      isAdmin: entity.isAdmin,
       createdAt: entity.createdAt,
     );
   }

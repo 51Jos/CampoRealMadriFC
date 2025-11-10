@@ -15,6 +15,14 @@ abstract class BookingRemoteDataSource {
   Future<List<BookingModel>> getUserBookings(String userId);
   Future<void> cancelBooking(String bookingId);
   Future<BookingModel> getBookingById(String bookingId);
+
+  // Métodos de administrador
+  Future<List<BookingModel>> getAllBookings();
+  Future<BookingModel> confirmBooking(String bookingId);
+  Future<BookingModel> rejectBooking({
+    required String bookingId,
+    required String reason,
+  });
 }
 
 class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
@@ -151,6 +159,69 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       return BookingModel.fromJson({...doc.data()!, 'id': doc.id});
     } catch (e) {
       throw Exception('Error al obtener reserva: $e');
+    }
+  }
+
+  @override
+  Future<List<BookingModel>> getAllBookings() async {
+    try {
+      final snapshot = await firestore
+          .collection('bookings')
+          .orderBy('date', descending: true)
+          .get();
+
+      // Obtener datos de usuario para cada reserva
+      final bookings = <BookingModel>[];
+      for (var doc in snapshot.docs) {
+        final bookingData = doc.data();
+        final userId = bookingData['userId'] as String;
+
+        // Obtener datos del usuario
+        final userDoc = await firestore.collection('users').doc(userId).get();
+        final userData = userDoc.data();
+
+        bookings.add(BookingModel.fromJson({
+          ...bookingData,
+          'id': doc.id,
+          'userName': userData?['name'] ?? 'Usuario',
+          'userPhone': userData?['phone'],
+          'userEmail': userData?['email'],
+        }));
+      }
+
+      return bookings;
+    } catch (e) {
+      throw Exception('Error al obtener todas las reservas: $e');
+    }
+  }
+
+  @override
+  Future<BookingModel> confirmBooking(String bookingId) async {
+    try {
+      await firestore.collection('bookings').doc(bookingId).update({
+        'status': BookingStatus.confirmed.name,
+      });
+
+      return await getBookingById(bookingId);
+    } catch (e) {
+      throw Exception('Error al confirmar reserva: $e');
+    }
+  }
+
+  @override
+  Future<BookingModel> rejectBooking({
+    required String bookingId,
+    required String reason,
+  }) async {
+    try {
+      await firestore.collection('bookings').doc(bookingId).update({
+        'status': BookingStatus.cancelled.name,
+        'rejectionReason': reason,
+      });
+
+      return await getBookingById(bookingId);
+    } catch (e) {
+      throw Exception('Error al rechazar reserva: $e');
     }
   }
 }

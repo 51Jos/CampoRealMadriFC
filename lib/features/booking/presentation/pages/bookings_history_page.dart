@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -8,7 +7,12 @@ import '../../domain/entities/booking.dart';
 import '../bloc/booking_bloc.dart';
 import '../bloc/booking_event.dart';
 import '../bloc/booking_state.dart';
-import 'booking_confirmation_page.dart';
+import '../widgets/booking_card.dart';
+import '../widgets/booking_detail_panel.dart';
+import '../widgets/booking_filter_chips.dart';
+import '../widgets/compact_booking_card.dart';
+import '../widgets/empty_state_widget.dart';
+import '../widgets/responsive_constants.dart';
 
 class BookingsHistoryPage extends StatefulWidget {
   final bool skipInitialLoad;
@@ -24,6 +28,7 @@ class BookingsHistoryPage extends StatefulWidget {
 
 class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
   BookingStatus? _selectedFilter;
+  Booking? _selectedBooking;
 
   @override
   void initState() {
@@ -46,6 +51,8 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
       backgroundColor: Colors.grey.shade50,
       body: LayoutBuilder(
         builder: (context, constraints) {
+          final breakpoint = ResponsiveUtils.getBreakpoint(constraints.maxWidth);
+
           return BlocBuilder<BookingBloc, BookingState>(
             builder: (context, state) {
               if (state is BookingLoading) {
@@ -55,7 +62,7 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
               }
 
               if (state is BookingError) {
-                return _buildErrorState(state.message, constraints.maxWidth);
+                return _buildErrorState(state.message, breakpoint);
               }
 
               if (state is UserBookingsLoaded) {
@@ -63,17 +70,30 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
 
                 return Column(
                   children: [
-                    _buildFilterChips(constraints.maxWidth),
+                    BookingFilterChips(
+                      selectedFilter: _selectedFilter,
+                      onFilterChanged: (filter) {
+                        setState(() {
+                          _selectedFilter = filter;
+                          // Reset selected booking when filter changes
+                          if (_selectedBooking != null &&
+                              !filteredBookings.contains(_selectedBooking)) {
+                            _selectedBooking = null;
+                          }
+                        });
+                      },
+                      breakpoint: breakpoint,
+                    ),
                     Expanded(
                       child: filteredBookings.isEmpty
-                          ? _buildEmptyState(constraints.maxWidth)
-                          : _buildBookingsList(filteredBookings, constraints.maxWidth),
+                          ? _buildEmptyState(breakpoint)
+                          : _buildBookingsContent(filteredBookings, breakpoint),
                     ),
                   ],
                 );
               }
 
-              return _buildEmptyState(constraints.maxWidth);
+              return _buildEmptyState(breakpoint);
             },
           );
         },
@@ -81,472 +101,287 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
     );
   }
 
-  // Métodos para dimensiones responsivas
-  double _getHorizontalPadding(double width) {
-    if (width < 360) return 12;
-    if (width < 600) return 16;
-    if (width < 900) return 20;
-    return 24;
-  }
-
-  double _getTitleFontSize(double width) {
-    if (width < 360) return 18;
-    if (width < 600) return 20;
-    return 22;
-  }
-
-  double _getSubtitleFontSize(double width) {
-    if (width < 360) return 14;
-    if (width < 600) return 16;
-    return 18;
-  }
-
-  double _getBodyFontSize(double width) {
-    if (width < 360) return 12;
-    if (width < 600) return 14;
-    return 14;
-  }
-
-  double _getButtonFontSize(double width) {
-    if (width < 360) return 11;
-    if (width < 600) return 12;
-    return 13;
-  }
-
-  double _getIconSize(double width) {
-    if (width < 360) return 64;
-    if (width < 600) return 80;
-    return 96;
-  }
+  // ============================================================================
+  // FILTRADO DE RESERVAS
+  // ============================================================================
 
   List<Booking> _filterBookings(List<Booking> bookings) {
-    final now = DateTime.now();
-    final futureBookings = bookings.where((booking) {
-      final bookingEndTime = booking.startTime.add(Duration(hours: booking.durationHours));
-      return bookingEndTime.isAfter(now);
-    }).toList();
+    if (_selectedFilter == null) return bookings;
+    return bookings.where((b) => b.status == _selectedFilter).toList();
+  }
 
-    if (_selectedFilter == null) {
-      return futureBookings;
+  // ============================================================================
+  // CONSTRUCCIÓN DE CONTENIDO SEGÚN BREAKPOINT
+  // ============================================================================
+
+  Widget _buildBookingsContent(List<Booking> bookings, ScreenBreakpoint breakpoint) {
+    switch (breakpoint) {
+      case ScreenBreakpoint.mobile:
+        return _buildMobileView(bookings, breakpoint);
+      case ScreenBreakpoint.tablet:
+        return _buildTabletView(bookings, breakpoint);
+      case ScreenBreakpoint.desktop:
+      case ScreenBreakpoint.largeDesktop:
+        return _buildDesktopView(bookings, breakpoint);
     }
-    return futureBookings.where((b) => b.status == _selectedFilter).toList();
   }
 
-  Widget _buildErrorState(String message, double width) {
-    final iconSize = _getIconSize(width);
-    final titleSize = _getSubtitleFontSize(width);
-    final bodySize = _getBodyFontSize(width);
+  // ============================================================================
+  // VISTA MÓVIL (Lista vertical)
+  // ============================================================================
 
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(_getHorizontalPadding(width)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: iconSize, color: Colors.red.shade300),
-            SizedBox(height: _getHorizontalPadding(width)),
-            Text(
-              'Error al cargar reservas',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: titleSize, color: Colors.grey.shade600),
-            ),
-            SizedBox(height: _getHorizontalPadding(width) * 0.5),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: bodySize, color: Colors.grey.shade500),
-            ),
-            SizedBox(height: _getHorizontalPadding(width) * 1.5),
-            ElevatedButton.icon(
-              onPressed: _loadBookings,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips(double width) {
-    final padding = _getHorizontalPadding(width);
-    final fontSize = _getButtonFontSize(width);
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: padding, vertical: padding * 0.75),
-      color: Colors.white,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Wrap(
-          spacing: padding * 0.5,
-          children: [
-            _buildFilterChip('Todas', null, Icons.list, fontSize),
-            _buildFilterChip('Pendientes', BookingStatus.pending, Icons.access_time, fontSize),
-            _buildFilterChip('Confirmadas', BookingStatus.confirmed, Icons.check_circle, fontSize),
-            _buildFilterChip('Canceladas', BookingStatus.cancelled, Icons.cancel, fontSize),
-            _buildFilterChip('Completadas', BookingStatus.completed, Icons.done_all, fontSize),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, BookingStatus? status, IconData icon, double fontSize) {
-    final isSelected = _selectedFilter == status;
-
-    return FilterChip(
-      selected: isSelected,
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: isSelected ? Colors.white : AppColors.primary),
-          const SizedBox(width: 4),
-          Text(label),
-        ],
-      ),
-      onSelected: (selected) {
-        setState(() {
-          _selectedFilter = selected ? status : null;
-        });
-      },
-      selectedColor: AppColors.primary,
-      backgroundColor: Colors.white,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : AppColors.primary,
-        fontWeight: FontWeight.bold,
-        fontSize: fontSize,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppColors.primary),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(double width) {
-    final iconSize = _getIconSize(width);
-    final titleSize = _getTitleFontSize(width);
-    final bodySize = _getBodyFontSize(width);
-
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(_getHorizontalPadding(width)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.history, size: iconSize, color: Colors.grey.shade300),
-            SizedBox(height: _getHorizontalPadding(width)),
-            Text(
-              'No hay reservas',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: titleSize,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            SizedBox(height: _getHorizontalPadding(width) * 0.5),
-            Text(
-              _selectedFilter != null
-                  ? 'No hay reservas con este estado'
-                  : 'Aún no has realizado ninguna reserva',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: bodySize, color: Colors.grey.shade500),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBookingsList(List<Booking> bookings, double width) {
-    final padding = _getHorizontalPadding(width);
-
+  Widget _buildMobileView(List<Booking> bookings, ScreenBreakpoint breakpoint) {
     return RefreshIndicator(
-      onRefresh: () async {
-        _loadBookings();
-      },
+      onRefresh: () async => _loadBookings(),
       child: ListView.builder(
-        padding: EdgeInsets.all(padding),
+        padding: EdgeInsets.symmetric(
+          vertical: ResponsiveUtils.getSpacing(breakpoint),
+        ),
         itemCount: bookings.length,
         itemBuilder: (context, index) {
-          return _buildBookingCard(bookings[index], width);
+          final booking = bookings[index];
+          return BookingCard(
+            booking: booking,
+            breakpoint: breakpoint,
+            onTap: () => _showBookingDetails(context, booking, breakpoint),
+            onCancel: () => _cancelBooking(booking),
+            onContact: () => _contactAdmin(),
+          );
         },
       ),
     );
   }
 
-  Widget _buildBookingCard(Booking booking, double width) {
-    final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'es');
-    final timeFormat = DateFormat('h:mm a', 'es');
-    final padding = _getHorizontalPadding(width);
-    final titleSize = _getBodyFontSize(width) + 2;
-    final bodySize = _getBodyFontSize(width);
-    final buttonSize = _getButtonFontSize(width);
+  // ============================================================================
+  // VISTA TABLET (Grid 2 columnas)
+  // ============================================================================
 
-    return Card(
-      margin: EdgeInsets.only(bottom: padding),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          // Header con estado
-          Container(
-            padding: EdgeInsets.all(padding),
-            decoration: BoxDecoration(
-              color: _getStatusColor(booking.status).withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      _getStatusIcon(booking.status),
-                      color: _getStatusColor(booking.status),
-                      size: 20,
-                    ),
-                    SizedBox(width: padding * 0.5),
-                    Text(
-                      _getStatusLabel(booking.status),
-                      style: TextStyle(
-                        color: _getStatusColor(booking.status),
-                        fontWeight: FontWeight.bold,
-                        fontSize: bodySize,
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: padding * 0.5,
-                    vertical: padding * 0.25,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '#${booking.id.substring(0, 8).toUpperCase()}',
-                    style: TextStyle(
-                      fontSize: bodySize - 4,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+  Widget _buildTabletView(List<Booking> bookings, ScreenBreakpoint breakpoint) {
+    final padding = ResponsiveUtils.getPadding(breakpoint);
 
-          // Detalles
-          Padding(
-            padding: EdgeInsets.all(padding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade600),
-                    SizedBox(width: padding * 0.5),
-                    Expanded(
-                      child: Text(
-                        dateFormat.format(booking.date),
-                        style: TextStyle(
-                          fontSize: bodySize,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: padding * 0.5),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
-                    SizedBox(width: padding * 0.5),
-                    Text(
-                      '${timeFormat.format(booking.startTime)} - ${timeFormat.format(booking.endTime)}',
-                      style: TextStyle(fontSize: bodySize),
-                    ),
-                  ],
-                ),
-                SizedBox(height: padding * 0.5),
-                Row(
-                  children: [
-                    Icon(Icons.timer, size: 16, color: Colors.grey.shade600),
-                    SizedBox(width: padding * 0.5),
-                    Text(
-                      '${booking.durationHours} ${booking.durationHours == 1 ? 'hora' : 'horas'}',
-                      style: TextStyle(fontSize: bodySize),
-                    ),
-                  ],
-                ),
-                SizedBox(height: padding),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total:',
-                      style: TextStyle(
-                        fontSize: titleSize,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'S/ ${booking.totalPrice.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: titleSize + 4,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.accent,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Botones de acción
-                SizedBox(height: padding),
-                const Divider(),
-                SizedBox(height: padding * 0.5),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _viewBookingDetails(booking),
-                        icon: const Icon(Icons.visibility, size: 16),
-                        label: Text('Ver', style: TextStyle(fontSize: buttonSize)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary),
-                          padding: EdgeInsets.symmetric(vertical: padding * 0.5),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: padding * 0.5),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _shareOnWhatsApp(booking),
-                        icon: const Icon(Icons.share, size: 16),
-                        label: Text('Compartir', style: TextStyle(fontSize: buttonSize)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.green,
-                          side: const BorderSide(color: Colors.green),
-                          padding: EdgeInsets.symmetric(vertical: padding * 0.5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: padding * 0.5),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _openGoogleMaps,
-                        icon: const Icon(Icons.location_on, size: 16),
-                        label: Text('Cómo llegar', style: TextStyle(fontSize: buttonSize)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                          side: const BorderSide(color: Colors.blue),
-                          padding: EdgeInsets.symmetric(vertical: padding * 0.5),
-                        ),
-                      ),
-                    ),
-                    if (booking.status == BookingStatus.pending ||
-                        booking.status == BookingStatus.confirmed) ...[
-                      SizedBox(width: padding * 0.5),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showCancelDialog(booking),
-                          icon: const Icon(Icons.cancel_outlined, size: 16),
-                          label: Text('Cancelar', style: TextStyle(fontSize: buttonSize)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
-                            padding: EdgeInsets.symmetric(vertical: padding * 0.5),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+    return RefreshIndicator(
+      onRefresh: () async => _loadBookings(),
+      child: GridView.builder(
+        padding: EdgeInsets.all(padding),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 1.5,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: bookings.length,
+        itemBuilder: (context, index) {
+          final booking = bookings[index];
+          return BookingCard(
+            booking: booking,
+            breakpoint: breakpoint,
+            onTap: () => _showBookingDetails(context, booking, breakpoint),
+            onCancel: () => _cancelBooking(booking),
+            onContact: () => _contactAdmin(),
+          );
+        },
       ),
     );
   }
 
-  Color _getStatusColor(BookingStatus status) {
-    switch (status) {
+  // ============================================================================
+  // VISTA DESKTOP (Master-Detail)
+  // ============================================================================
+
+  Widget _buildDesktopView(List<Booking> bookings, ScreenBreakpoint breakpoint) {
+    return Row(
+      children: [
+        // Panel Master (Lista de reservas)
+        SizedBox(
+          width: 350,
+          child: Column(
+            children: [
+              // Header del panel Master
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade200),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.history, color: AppColors.primary),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Mis Reservas (${bookings.length})',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Lista de reservas compactas
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = bookings[index];
+                    return CompactBookingCard(
+                      booking: booking,
+                      isSelected: _selectedBooking?.id == booking.id,
+                      onTap: () {
+                        setState(() {
+                          _selectedBooking = booking;
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Panel Detail (Detalle de reserva seleccionada)
+        Expanded(
+          child: _selectedBooking == null
+              ? _buildNoSelectionState(breakpoint)
+              : BookingDetailPanel(
+                  booking: _selectedBooking!,
+                  onCancel: () => _cancelBooking(_selectedBooking!),
+                  onContact: () => _contactAdmin(),
+                  onWhatsApp: () => _launchWhatsApp(),
+                  onMaps: () => _launchMaps(),
+                ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // ESTADOS VACÍOS Y DE ERROR
+  // ============================================================================
+
+  Widget _buildEmptyState(ScreenBreakpoint breakpoint) {
+    return EmptyStateWidget(
+      icon: Icons.event_busy,
+      title: _selectedFilter == null
+          ? 'No tienes reservas'
+          : 'No hay reservas ${_getFilterName()}',
+      message: _selectedFilter == null
+          ? 'Tus reservas aparecerán aquí una vez que hagas una'
+          : 'Intenta cambiar el filtro para ver otras reservas',
+      breakpoint: breakpoint,
+    );
+  }
+
+  Widget _buildNoSelectionState(ScreenBreakpoint breakpoint) {
+    return EmptyStateWidget(
+      icon: Icons.touch_app,
+      title: 'Selecciona una reserva',
+      message: 'Elige una reserva de la lista para ver sus detalles',
+      breakpoint: breakpoint,
+    );
+  }
+
+  Widget _buildErrorState(String message, ScreenBreakpoint breakpoint) {
+    return EmptyStateWidget(
+      icon: Icons.error_outline,
+      title: 'Error',
+      message: message,
+      breakpoint: breakpoint,
+      actionLabel: 'Reintentar',
+      onAction: _loadBookings,
+    );
+  }
+
+  String _getFilterName() {
+    switch (_selectedFilter) {
       case BookingStatus.pending:
-        return Colors.orange;
+        return 'pendientes';
       case BookingStatus.confirmed:
-        return Colors.green;
+        return 'confirmadas';
       case BookingStatus.cancelled:
-        return Colors.red;
+        return 'canceladas';
       case BookingStatus.completed:
-        return Colors.blue;
+        return 'completadas';
+      default:
+        return '';
     }
   }
 
-  IconData _getStatusIcon(BookingStatus status) {
-    switch (status) {
-      case BookingStatus.pending:
-        return Icons.access_time;
-      case BookingStatus.confirmed:
-        return Icons.check_circle;
-      case BookingStatus.cancelled:
-        return Icons.cancel;
-      case BookingStatus.completed:
-        return Icons.done_all;
-    }
+  // ============================================================================
+  // ACCIONES
+  // ============================================================================
+
+  void _showBookingDetails(BuildContext context, Booking booking, ScreenBreakpoint breakpoint) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: BookingDetailPanel(
+            booking: booking,
+            onCancel: () {
+              Navigator.pop(context);
+              _cancelBooking(booking);
+            },
+            onContact: () {
+              Navigator.pop(context);
+              _contactAdmin();
+            },
+            onWhatsApp: () => _launchWhatsApp(),
+            onMaps: () => _launchMaps(),
+          ),
+        ),
+      ),
+    );
   }
 
-  String _getStatusLabel(BookingStatus status) {
-    switch (status) {
-      case BookingStatus.pending:
-        return 'Pendiente';
-      case BookingStatus.confirmed:
-        return 'Confirmada';
-      case BookingStatus.cancelled:
-        return 'Cancelada';
-      case BookingStatus.completed:
-        return 'Completada';
-    }
-  }
-
-  void _showCancelDialog(Booking booking) {
+  void _cancelBooking(Booking booking) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancelar Reserva'),
         content: const Text(
-          '¿Estás seguro que deseas cancelar esta reserva?\n\nEsta acción no se puede deshacer.',
+          '¿Estás seguro de que deseas cancelar esta reserva?\n\n'
+          'Esta acción no se puede deshacer.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('No'),
+            child: const Text('No, volver'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _cancelBooking(booking);
+              context.read<BookingBloc>().add(CancelBookingEvent(booking.id));
+
+              // Clear selection if it was the cancelled booking
+              if (_selectedBooking?.id == booking.id) {
+                setState(() {
+                  _selectedBooking = null;
+                });
+              }
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Reserva cancelada exitosamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Sí, cancelar'),
           ),
@@ -555,49 +390,17 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
     );
   }
 
-  void _cancelBooking(Booking booking) {
-    context.read<BookingBloc>().add(CancelBookingEvent(booking.id));
-
+  void _contactAdmin() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Reserva cancelada exitosamente'),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) _loadBookings();
-    });
-  }
-
-  void _viewBookingDetails(Booking booking) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BookingConfirmationPage(booking: booking),
+        content: Text('Contactando con el administrador...'),
       ),
     );
   }
 
-  void _shareOnWhatsApp(Booking booking) async {
-    final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'es');
-    final timeFormat = DateFormat('h:mm a', 'es');
-
-    final message = '''
-🏟️ *Reserva Real Madrid FC - Campo Sintético*
-
-📅 Fecha: ${dateFormat.format(booking.date)}
-⏰ Horario: ${timeFormat.format(booking.startTime)} - ${timeFormat.format(booking.startTime.add(Duration(hours: booking.durationHours)))}
-⏱️ Duración: ${booking.durationHours} ${booking.durationHours == 1 ? 'hora' : 'horas'}
-💰 Total: S/ ${booking.totalPrice.toStringAsFixed(2)}
-📋 Estado: ${_getStatusLabel(booking.status)}
-🆔 Código: #${booking.id.substring(0, 8).toUpperCase()}
-
-📍 *Ubicación:* Real Madrid FC - Lima
-''';
-
-    final encodedMessage = Uri.encodeComponent(message);
-    final url = Uri.parse('https://wa.me/?text=$encodedMessage');
+  Future<void> _launchWhatsApp() async {
+    const phoneNumber = '51999999999'; // Número del negocio
+    final url = Uri.parse('https://wa.me/$phoneNumber');
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -613,11 +416,11 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
     }
   }
 
-  void _openGoogleMaps() async {
-    const lat = -12.0464;
-    const lng = -77.0428;
-
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+  Future<void> _launchMaps() async {
+    // Coordenadas del Real Madrid Café Lima (ejemplo)
+    const latitude = -12.0464;
+    const longitude = -77.0428;
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);

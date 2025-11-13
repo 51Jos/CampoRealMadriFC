@@ -101,8 +101,39 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
     result.fold(
       (failure) => emit(BookingError(failure.message)),
-      (bookings) => emit(UserBookingsLoaded(bookings)),
+      (bookings) {
+        // Filtrar reservas del día actual en adelante y ordenar
+        final filteredAndSorted = _filterAndSortBookings(bookings);
+        emit(UserBookingsLoaded(filteredAndSorted));
+      },
     );
+  }
+
+  /// Filtra reservas del día actual en adelante y las ordena por fecha/hora
+  List<dynamic> _filterAndSortBookings(List<dynamic> bookings) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Filtrar solo reservas de hoy en adelante
+    final futureBookings = bookings.where((booking) {
+      final bookingDate = DateTime(
+        booking.date.year,
+        booking.date.month,
+        booking.date.day,
+      );
+      return bookingDate.isAfter(today) || bookingDate.isAtSameMomentAs(today);
+    }).toList();
+
+    // Ordenar por fecha y hora (más próximas primero)
+    futureBookings.sort((a, b) {
+      final dateComparison = a.date.compareTo(b.date);
+      if (dateComparison != 0) {
+        return dateComparison;
+      }
+      return a.startTime.compareTo(b.startTime);
+    });
+
+    return futureBookings;
   }
 
   Future<void> _onCancelBooking(

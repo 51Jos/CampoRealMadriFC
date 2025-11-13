@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../booking/domain/entities/booking.dart';
 import '../../../booking/domain/usecases/confirm_booking_usecase.dart';
+import '../../../booking/domain/usecases/create_admin_booking.dart';
 import '../../../booking/domain/usecases/get_all_bookings_usecase.dart';
 import '../../../booking/domain/usecases/reject_booking_usecase.dart';
 import 'admin_event.dart';
@@ -11,16 +12,19 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
   final GetAllBookingsUseCase getAllBookingsUseCase;
   final ConfirmBookingUseCase confirmBookingUseCase;
   final RejectBookingUseCase rejectBookingUseCase;
+  final CreateAdminBooking createAdminBooking;
 
   AdminBloc({
     required this.getAllBookingsUseCase,
     required this.confirmBookingUseCase,
     required this.rejectBookingUseCase,
+    required this.createAdminBooking,
   }) : super(const AdminInitial()) {
     on<LoadAllBookingsEvent>(_onLoadAllBookings);
     on<ConfirmBookingEvent>(_onConfirmBooking);
     on<RejectBookingEvent>(_onRejectBooking);
     on<FilterBookingsByStatusEvent>(_onFilterByStatus);
+    on<CreateAdminBookingEvent>(_onCreateAdminBooking);
   }
 
   Future<void> _onLoadAllBookings(
@@ -33,11 +37,16 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
 
     result.fold(
       (failure) => emit(AdminError(failure.message)),
-      (bookings) => emit(AdminBookingsLoaded(
-        bookings: bookings,
-        filteredBookings: bookings,
-        currentFilter: null,
-      )),
+      (bookings) {
+        // Filtrar reservas del día actual en adelante y ordenar
+        final filteredAndSorted = _filterAndSortBookings(bookings);
+
+        emit(AdminBookingsLoaded(
+          bookings: filteredAndSorted,
+          filteredBookings: filteredAndSorted,
+          currentFilter: null,
+        ));
+      },
     );
   }
 
@@ -161,6 +170,33 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     ));
   }
 
+  /// Filtra reservas del día actual en adelante y las ordena por fecha/hora
+  List<Booking> _filterAndSortBookings(List<Booking> bookings) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Filtrar solo reservas de hoy en adelante
+    final futureBookings = bookings.where((booking) {
+      final bookingDate = DateTime(
+        booking.date.year,
+        booking.date.month,
+        booking.date.day,
+      );
+      return bookingDate.isAfter(today) || bookingDate.isAtSameMomentAs(today);
+    }).toList();
+
+    // Ordenar por fecha y hora (más próximas primero)
+    futureBookings.sort((a, b) {
+      final dateComparison = a.date.compareTo(b.date);
+      if (dateComparison != 0) {
+        return dateComparison;
+      }
+      return a.startTime.compareTo(b.startTime);
+    });
+
+    return futureBookings;
+  }
+
   List<Booking> _filterBookings(List<Booking> bookings, String? filter) {
     if (filter == null || filter == 'all') {
       return bookings;
@@ -169,5 +205,27 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     return bookings.where((booking) {
       return booking.status.name == filter;
     }).toList();
+  }
+
+  Future<void> _onCreateAdminBooking(
+    CreateAdminBookingEvent event,
+    Emitter<AdminState> emit,
+  ) async {
+    emit(const AdminLoading());
+
+    final result = await createAdminBooking(
+      adminUserId: event.adminUserId,
+      date: event.date,
+      startTime: event.startTime,
+      durationHours: event.durationHours,
+      clientName: event.clientName,
+      clientPhone: event.clientPhone,
+      clientEmail: event.clientEmail,
+    );
+
+    result.fold(
+      (failure) => emit(AdminError(failure.message)),
+      (booking) => emit(AdminBookingCreated(booking)),
+    );
   }
 }

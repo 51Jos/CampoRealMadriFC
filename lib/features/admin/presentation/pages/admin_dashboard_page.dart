@@ -76,11 +76,33 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           Expanded(child: _buildBookingsList()),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await context.push('/admin/create-booking');
+          if (result == true && mounted) {
+            context.read<AdminBloc>().add(const LoadAllBookingsEvent());
+          }
+        },
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add),
+        label: const Text('Nueva Reserva'),
+      ),
     );
   }
 
   Widget _buildDesktopLayout() {
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await context.push('/admin/create-booking');
+          if (result == true && mounted) {
+            context.read<AdminBloc>().add(const LoadAllBookingsEvent());
+          }
+        },
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add),
+        label: const Text('Nueva Reserva'),
+      ),
       body: Row(
         children: [
           // NavigationRail lateral
@@ -498,37 +520,63 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
           // Acciones
           if (booking.status == BookingStatus.pending) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      context.read<AdminBloc>().add(ConfirmBookingEvent(booking.id));
-                    },
-                    icon: const Icon(Icons.check_circle),
-                    label: const Text('Confirmar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+            if (_isBookingExpired(booking))
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Esta reserva ya pasó su horario. No se puede confirmar ni rechazar.',
+                        style: TextStyle(
+                          color: Colors.orange.shade900,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.read<AdminBloc>().add(ConfirmBookingEvent(booking.id));
+                      },
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('Confirmar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showRejectDialog(booking),
-                    icon: const Icon(Icons.cancel),
-                    label: const Text('Rechazar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showRejectDialog(booking),
+                      icon: const Icon(Icons.cancel),
+                      label: const Text('Rechazar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             const SizedBox(height: 16),
           ],
 
@@ -646,6 +694,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         ),
       ),
     );
+  }
+
+  bool _isBookingExpired(Booking booking) {
+    final now = DateTime.now();
+    final bookingDateTime = DateTime(
+      booking.date.year,
+      booking.date.month,
+      booking.date.day,
+      booking.startTime.hour,
+      booking.startTime.minute,
+    );
+    return bookingDateTime.isBefore(now);
   }
 
   void _showRejectDialog(Booking booking) {

@@ -328,12 +328,14 @@ class BookingDetailPanel extends StatelessWidget {
         if (onCancel != null && booking.status != BookingStatus.cancelled) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: onCancel,
+            onPressed: _canCancelBooking() ? onCancel : null,
             icon: const Icon(Icons.cancel_outlined),
-            label: const Text('Cancelar Reserva'),
+            label: Text(_canCancelBooking()
+              ? 'Cancelar Reserva'
+              : 'Cancelar Reserva (mínimo 5h anticipación)'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red.shade600,
-              side: BorderSide(color: Colors.red.shade600),
+              foregroundColor: _canCancelBooking() ? Colors.red.shade600 : Colors.grey,
+              side: BorderSide(color: _canCancelBooking() ? Colors.red.shade600 : Colors.grey),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -411,5 +413,19 @@ class BookingDetailPanel extends StatelessWidget {
   bool _shouldShowActions() {
     return booking.status == BookingStatus.confirmed ||
         booking.status == BookingStatus.pending;
+  }
+
+  bool _canCancelBooking() {
+    // Solo se puede cancelar si faltan al menos 5 horas
+    final now = DateTime.now();
+    final bookingDateTime = DateTime(
+      booking.date.year,
+      booking.date.month,
+      booking.date.day,
+      booking.startTime.hour,
+      booking.startTime.minute,
+    );
+    final hoursUntilBooking = bookingDateTime.difference(now).inHours;
+    return hoursUntilBooking >= 5;
   }
 }

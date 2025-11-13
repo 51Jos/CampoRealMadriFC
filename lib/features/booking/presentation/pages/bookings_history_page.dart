@@ -347,6 +347,49 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
   }
 
   void _cancelBooking(Booking booking) {
+    // Validar que falten al menos 5 horas para la reserva
+    final now = DateTime.now();
+    final bookingDateTime = DateTime(
+      booking.date.year,
+      booking.date.month,
+      booking.date.day,
+      booking.startTime.hour,
+      booking.startTime.minute,
+    );
+    final hoursUntilBooking = bookingDateTime.difference(now).inHours;
+
+    if (hoursUntilBooking < 5) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('No se puede cancelar'),
+          content: Text(
+            'Las reservas deben cancelarse con al menos 5 horas de anticipación.\n\n'
+            'Tu reserva es en ${hoursUntilBooking > 0 ? "$hoursUntilBooking horas" : "menos de 1 hora"}.\n\n'
+            'Para cancelaciones de último momento, por favor contacta al administrador.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Entendido'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _contactAdmin();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Contactar Admin'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

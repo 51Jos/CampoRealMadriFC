@@ -81,36 +81,63 @@ class AdminBookingDetailPage extends StatelessWidget {
 
             // Acciones
             if (booking.status == BookingStatus.pending) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    context.read<AdminBloc>().add(ConfirmBookingEvent(booking.id));
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.check_circle),
-                  label: const Text('Confirmar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+              if (_isBookingExpired(booking))
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Esta reserva ya pasó su horario. No se puede confirmar ni rechazar.',
+                          style: TextStyle(
+                            color: Colors.orange.shade900,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      context.read<AdminBloc>().add(ConfirmBookingEvent(booking.id));
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('Confirmar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _showRejectDialog(context, booking),
-                  icon: const Icon(Icons.cancel),
-                  label: const Text('Rechazar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showRejectDialog(context, booking),
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('Rechazar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
             ],
 
@@ -189,6 +216,18 @@ class AdminBookingDetailPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _isBookingExpired(Booking booking) {
+    final now = DateTime.now();
+    final bookingDateTime = DateTime(
+      booking.date.year,
+      booking.date.month,
+      booking.date.day,
+      booking.startTime.hour,
+      booking.startTime.minute,
+    );
+    return bookingDateTime.isBefore(now);
   }
 
   Widget _buildStatusChip(BookingStatus status) {

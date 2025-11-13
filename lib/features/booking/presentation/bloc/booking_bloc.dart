@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/entities/booking.dart';
 import '../../domain/usecases/cancel_booking.dart';
 import '../../domain/usecases/create_booking.dart';
 import '../../domain/usecases/get_available_time_slots.dart';
@@ -110,7 +111,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
   }
 
   /// Filtra reservas del día actual en adelante y las ordena por fecha/hora
-  List<dynamic> _filterAndSortBookings(List<dynamic> bookings) {
+  List<Booking> _filterAndSortBookings(List<Booking> bookings) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 

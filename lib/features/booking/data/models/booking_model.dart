@@ -16,6 +16,10 @@ class BookingModel extends Booking {
     super.userName,
     super.userPhone,
     super.userEmail,
+    super.isAdminCreated,
+    super.clientName,
+    super.clientPhone,
+    super.clientEmail,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,10 @@ class BookingModel extends Booking {
       userName: json['userName'] as String?,
       userPhone: json['userPhone'] as String?,
       userEmail: json['userEmail'] as String?,
+      isAdminCreated: json['isAdminCreated'] as bool? ?? false,
+      clientName: json['clientName'] as String?,
+      clientPhone: json['clientPhone'] as String?,
+      clientEmail: json['clientEmail'] as String?,
     );
   }
 
@@ -52,6 +60,10 @@ class BookingModel extends Booking {
       'userName': userName,
       'userPhone': userPhone,
       'userEmail': userEmail,
+      'isAdminCreated': isAdminCreated,
+      'clientName': clientName,
+      'clientPhone': clientPhone,
+      'clientEmail': clientEmail,
     };
   }
 }

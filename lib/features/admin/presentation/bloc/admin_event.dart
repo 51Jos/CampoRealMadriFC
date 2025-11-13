@@ -46,3 +46,35 @@ class FilterBookingsByStatusEvent extends AdminEvent {
   @override
   List<Object?> get props => [status];
 }
+
+/// Evento para crear una reserva de admin con datos del cliente
+class CreateAdminBookingEvent extends AdminEvent {
+  final String adminUserId;
+  final DateTime date;
+  final DateTime startTime;
+  final int durationHours;
+  final String clientName;
+  final String clientPhone;
+  final String? clientEmail;
+
+  const CreateAdminBookingEvent({
+    required this.adminUserId,
+    required this.date,
+    required this.startTime,
+    required this.durationHours,
+    required this.clientName,
+    required this.clientPhone,
+    this.clientEmail,
+  });
+
+  @override
+  List<Object?> get props => [
+        adminUserId,
+        date,
+        startTime,
+        durationHours,
+        clientName,
+        clientPhone,
+        clientEmail,
+      ];
+}

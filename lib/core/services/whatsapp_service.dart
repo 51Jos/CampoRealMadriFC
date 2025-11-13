@@ -5,10 +5,10 @@ import '../../features/booking/domain/entities/booking.dart';
 /// Servicio para enviar mensajes por WhatsApp
 class WhatsAppService {
   /// Envía un mensaje de confirmación de reserva por WhatsApp
-  Future<bool> sendBookingConfirmation(Booking booking) async {
+  Future<bool> sendBookingConfirmation(Booking booking, {String? mapsLink}) async {
     if (booking.userPhone == null) return false;
 
-    final message = _buildConfirmationMessage(booking);
+    final message = _buildConfirmationMessage(booking, mapsLink);
     return await _sendWhatsAppMessage(booking.userPhone!, message);
   }
 
@@ -26,10 +26,14 @@ class WhatsAppService {
   }
 
   /// Construye el mensaje de confirmación
-  String _buildConfirmationMessage(Booking booking) {
+  String _buildConfirmationMessage(Booking booking, [String? mapsLink]) {
     final date = booking.date;
     final dateStr = '${date.day}/${date.month}/${date.year}';
     final timeStr = '${booking.startTime.hour}:00';
+
+    final locationSection = mapsLink != null
+        ? '\n📍 Cómo llegar: $mapsLink\n'
+        : '';
 
     return '''
 ¡Hola ${booking.userName ?? 'Usuario'}! 👋
@@ -39,8 +43,7 @@ class WhatsAppService {
 📅 Fecha: $dateStr
 ⏰ Hora: $timeStr
 ⏱️ Duración: ${booking.durationHours}h
-💰 Total: S/ ${booking.totalPrice.toStringAsFixed(2)}
-
+💰 Total: S/ ${booking.totalPrice.toStringAsFixed(2)}$locationSection
 ¡Te esperamos en la cancha! ⚽
 
 _Sintético Lima_

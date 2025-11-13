@@ -14,6 +14,10 @@ class Booking extends Equatable {
   final String? userName;
   final String? userPhone;
   final String? userEmail;
+  final bool isAdminCreated;
+  final String? clientName;
+  final String? clientPhone;
+  final String? clientEmail;
 
   const Booking({
     required this.id,
@@ -28,6 +32,10 @@ class Booking extends Equatable {
     this.userName,
     this.userPhone,
     this.userEmail,
+    this.isAdminCreated = false,
+    this.clientName,
+    this.clientPhone,
+    this.clientEmail,
   });
 
   DateTime get endTime => startTime.add(Duration(hours: durationHours));
@@ -46,6 +54,10 @@ class Booking extends Equatable {
         userName,
         userPhone,
         userEmail,
+        isAdminCreated,
+        clientName,
+        clientPhone,
+        clientEmail,
       ];
 }
 

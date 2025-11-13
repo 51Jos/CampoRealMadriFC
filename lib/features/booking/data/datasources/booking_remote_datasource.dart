@@ -23,6 +23,15 @@ abstract class BookingRemoteDataSource {
     required String bookingId,
     required String reason,
   });
+  Future<BookingModel> createAdminBooking({
+    required String adminUserId,
+    required DateTime date,
+    required DateTime startTime,
+    required int durationHours,
+    required String clientName,
+    required String clientPhone,
+    String? clientEmail,
+  });
 }
 
 class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
@@ -222,6 +231,55 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       return await getBookingById(bookingId);
     } catch (e) {
       throw Exception('Error al rechazar reserva: $e');
+    }
+  }
+
+  @override
+  Future<BookingModel> createAdminBooking({
+    required String adminUserId,
+    required DateTime date,
+    required DateTime startTime,
+    required int durationHours,
+    required String clientName,
+    required String clientPhone,
+    String? clientEmail,
+  }) async {
+    try {
+      final totalPrice = durationHours * 50.0; // 50 soles por hora
+
+      final booking = BookingModel(
+        id: '', // Se generará por Firestore
+        userId: adminUserId, // El ID del admin que crea la reserva
+        date: DateTime(date.year, date.month, date.day),
+        startTime: startTime,
+        durationHours: durationHours,
+        totalPrice: totalPrice,
+        status: BookingStatus.pending,
+        createdAt: DateTime.now(),
+        isAdminCreated: true,
+        clientName: clientName,
+        clientPhone: clientPhone,
+        clientEmail: clientEmail,
+      );
+
+      final docRef = await firestore.collection('bookings').add(booking.toJson());
+
+      return BookingModel(
+        id: docRef.id,
+        userId: booking.userId,
+        date: booking.date,
+        startTime: booking.startTime,
+        durationHours: booking.durationHours,
+        totalPrice: booking.totalPrice,
+        status: booking.status,
+        createdAt: booking.createdAt,
+        isAdminCreated: booking.isAdminCreated,
+        clientName: booking.clientName,
+        clientPhone: booking.clientPhone,
+        clientEmail: booking.clientEmail,
+      );
+    } catch (e) {
+      throw Exception('Error al crear reserva de admin: $e');
     }
   }
 }

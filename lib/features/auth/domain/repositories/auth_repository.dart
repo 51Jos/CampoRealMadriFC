@@ -45,4 +45,7 @@ abstract class AuthRepository {
     required String currentPassword,
     required String newPassword,
   });
+
+  /// Obtiene todos los usuarios (solo para admin)
+  Future<Either<Failure, List<UserEntity>>> getAllUsers();
 }

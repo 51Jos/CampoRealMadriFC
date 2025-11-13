@@ -38,4 +38,15 @@ abstract class BookingRepository {
     required String bookingId,
     required String reason,
   });
+
+  /// Crea una reserva para un cliente (solo admin)
+  Future<Either<Failure, Booking>> createAdminBooking({
+    required String adminUserId,
+    required DateTime date,
+    required DateTime startTime,
+    required int durationHours,
+    required String clientName,
+    required String clientPhone,
+    String? clientEmail,
+  });
 }

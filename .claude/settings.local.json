@@ -18,7 +18,9 @@
       "Bash(clip)",
       "Bash(timeout 30 bash:*)",
       "Bash(if exist nul del nul)",
-      "Bash(.gitignore)"
+      "Bash(.gitignore)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFeat: Módulo de administrador completo con gestión de reservas y WhatsApp\n\n- Agregar campo isAdmin a UserEntity y UserModel para control de acceso\n- Crear AdminBloc con eventos para cargar, confirmar y rechazar reservas\n- Implementar AdminLoginPage con verificación de rol de administrador\n- Crear AdminDashboardPage totalmente responsivo (móvil, tablet, desktop)\n- Implementar patrón Master-Detail para vista desktop\n- Agregar AdminBookingDetailPage para vista móvil/tablet\n- Crear WhatsAppService para enviar mensajes (confirmación, rechazo, personalizado)\n- Soporte web y móvil para WhatsApp (LaunchMode adaptativo)\n- Extender Booking entity con rejectionReason y datos del usuario\n- Implementar use cases: GetAllBookingsUseCase, ConfirmBookingUseCase, RejectBookingUseCase\n- Actualizar BookingRepository con métodos admin\n- Actualizar booking_remote_datasource para obtener datos de usuario\n- Registrar componentes admin en dependency injection\n- Agregar rutas /admin/login y /admin/dashboard\n- Fix: ProviderNotFoundException guardando AdminBloc antes de crear ruta\n- Fix: WhatsApp en web usando LaunchMode.platformDefault\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -144,4 +144,34 @@ class BookingRepositoryImpl implements BookingRepository {
       return Left(ServerFailure(message: e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, Booking>> createAdminBooking({
+    required String adminUserId,
+    required DateTime date,
+    required DateTime startTime,
+    required int durationHours,
+    required String clientName,
+    required String clientPhone,
+    String? clientEmail,
+  }) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final booking = await remoteDataSource.createAdminBooking(
+        adminUserId: adminUserId,
+        date: date,
+        startTime: startTime,
+        durationHours: durationHours,
+        clientName: clientName,
+        clientPhone: clientPhone,
+        clientEmail: clientEmail,
+      );
+      return Right(booking);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
 }

@@ -90,3 +90,13 @@ class AdminError extends AdminState {
   @override
   List<Object?> get props => [message];
 }
+
+/// Reserva creada exitosamente
+class AdminBookingCreated extends AdminState {
+  final Booking booking;
+
+  const AdminBookingCreated(this.booking);
+
+  @override
+  List<Object?> get props => [booking];
+}

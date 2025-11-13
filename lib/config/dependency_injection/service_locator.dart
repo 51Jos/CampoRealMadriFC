@@ -19,6 +19,7 @@ import '../../features/booking/data/repositories/booking_repository_impl.dart';
 import '../../features/booking/domain/repositories/booking_repository.dart';
 import '../../features/booking/domain/usecases/cancel_booking.dart';
 import '../../features/booking/domain/usecases/confirm_booking_usecase.dart';
+import '../../features/booking/domain/usecases/create_admin_booking.dart';
 import '../../features/booking/domain/usecases/create_booking.dart';
 import '../../features/booking/domain/usecases/get_all_bookings_usecase.dart';
 import '../../features/booking/domain/usecases/get_available_time_slots.dart';
@@ -110,6 +111,7 @@ Future<void> initializeDependencies() async {
   sl.registerLazySingleton(() => GetAllBookingsUseCase(sl()));
   sl.registerLazySingleton(() => ConfirmBookingUseCase(sl()));
   sl.registerLazySingleton(() => RejectBookingUseCase(sl()));
+  sl.registerLazySingleton(() => CreateAdminBooking(sl()));
 
   // BLoC
   sl.registerFactory(
@@ -131,6 +133,7 @@ Future<void> initializeDependencies() async {
       getAllBookingsUseCase: sl(),
       confirmBookingUseCase: sl(),
       rejectBookingUseCase: sl(),
+      createAdminBooking: sl(),
     ),
   );
 }

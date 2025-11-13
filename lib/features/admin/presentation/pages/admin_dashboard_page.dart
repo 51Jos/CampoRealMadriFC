@@ -166,9 +166,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 selectedIcon: Icon(Icons.dashboard),
                 label: Text('Reservas'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: Text('Configuración'),
+              ),
             ],
             selectedIndex: 0,
-            onDestinationSelected: (index) {},
+            onDestinationSelected: (index) {
+              if (index == 1) {
+                context.push('/admin/company-settings');
+              }
+            },
             selectedIconTheme: const IconThemeData(
               color: AppColors.primary,
               size: 28,

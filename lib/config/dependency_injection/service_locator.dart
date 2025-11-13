@@ -26,6 +26,12 @@ import '../../features/booking/domain/usecases/get_available_time_slots.dart';
 import '../../features/booking/domain/usecases/get_user_bookings.dart';
 import '../../features/booking/domain/usecases/reject_booking_usecase.dart';
 import '../../features/booking/presentation/bloc/booking_bloc.dart';
+import '../../features/company/data/datasources/company_remote_datasource.dart';
+import '../../features/company/data/repositories/company_repository_impl.dart';
+import '../../features/company/domain/repositories/company_repository.dart';
+import '../../features/company/domain/usecases/get_company_info.dart';
+import '../../features/company/domain/usecases/update_company_info.dart';
+import '../../features/company/presentation/bloc/company_bloc.dart';
 import '../../shared/services/storage_service.dart';
 
 final sl = GetIt.instance;
@@ -134,6 +140,32 @@ Future<void> initializeDependencies() async {
       confirmBookingUseCase: sl(),
       rejectBookingUseCase: sl(),
       createAdminBooking: sl(),
+    ),
+  );
+
+  // ============================================================================
+  // FEATURE: COMPANY
+  // ============================================================================
+
+  // Data sources
+  sl.registerLazySingleton<CompanyRemoteDataSource>(
+    () => CompanyRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  // Repository
+  sl.registerLazySingleton<CompanyRepository>(
+    () => CompanyRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Use cases
+  sl.registerLazySingleton(() => GetCompanyInfo(sl()));
+  sl.registerLazySingleton(() => UpdateCompanyInfo(sl()));
+
+  // BLoC
+  sl.registerFactory(
+    () => CompanyBloc(
+      getCompanyInfo: sl(),
+      updateCompanyInfo: sl(),
     ),
   );
 }

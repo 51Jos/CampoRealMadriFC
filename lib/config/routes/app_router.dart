@@ -6,6 +6,8 @@ import '../../features/admin/presentation/pages/admin_create_booking_page.dart';
 import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
 import '../../features/admin/presentation/pages/admin_login_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/company/presentation/bloc/company_bloc.dart';
+import '../../features/company/presentation/pages/company_settings_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
@@ -22,6 +24,7 @@ class AppRouter {
   static const String adminLogin = '/admin/login';
   static const String adminDashboard = '/admin/dashboard';
   static const String adminCreateBooking = '/admin/create-booking';
+  static const String companySettings = '/admin/company-settings';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -90,6 +93,14 @@ class AppRouter {
             BlocProvider(create: (context) => sl<AdminBloc>()),
           ],
           child: const AdminCreateBookingPage(),
+        ),
+      ),
+      GoRoute(
+        path: companySettings,
+        name: 'companySettings',
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<CompanyBloc>(),
+          child: const CompanySettingsPage(),
         ),
       ),
     ],

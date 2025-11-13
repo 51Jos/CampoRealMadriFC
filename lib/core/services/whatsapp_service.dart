@@ -77,25 +77,46 @@ _Sintético Lima_
 
       // Si no tiene código de país, agregar +51 (Perú)
       final phoneWithCountryCode = cleanPhone.startsWith('+')
-          ? cleanPhone
-          : '+51$cleanPhone';
+          ? cleanPhone.substring(1) // Quitar el + para el formato
+          : '51$cleanPhone';
 
       // Codificar el mensaje para URL
       final encodedMessage = Uri.encodeComponent(message);
 
       // Construir URL de WhatsApp
-      final url = Uri.parse('https://wa.me/$phoneWithCountryCode?text=$encodedMessage');
+      // Para web usamos wa.me
+      // Para mobile (iOS/Android) intentamos primero whatsapp://
+      Uri url;
+      LaunchMode mode;
+
+      if (kIsWeb) {
+        // En web usar wa.me que funciona mejor
+        url = Uri.parse('https://wa.me/$phoneWithCountryCode?text=$encodedMessage');
+        mode = LaunchMode.platformDefault;
+      } else {
+        // En mobile usar el esquema whatsapp:// que es más confiable
+        url = Uri.parse('whatsapp://send?phone=$phoneWithCountryCode&text=$encodedMessage');
+        mode = LaunchMode.externalApplication;
+      }
 
       // Intentar abrir WhatsApp
-      // En web usamos platformDefault para que abra en nueva pestaña
-      // En mobile usamos externalApplication para abrir la app de WhatsApp
       if (await canLaunchUrl(url)) {
         return await launchUrl(
           url,
-          mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
-          webOnlyWindowName: kIsWeb ? '_blank' : null, // Abre en nueva pestaña en web
+          mode: mode,
+          webOnlyWindowName: kIsWeb ? '_blank' : null,
         );
       } else {
+        // Si falla con whatsapp://, intentar con https://wa.me/ como fallback
+        if (!kIsWeb) {
+          final fallbackUrl = Uri.parse('https://wa.me/$phoneWithCountryCode?text=$encodedMessage');
+          if (await canLaunchUrl(fallbackUrl)) {
+            return await launchUrl(
+              fallbackUrl,
+              mode: LaunchMode.externalApplication,
+            );
+          }
+        }
         throw Exception('No se puede abrir WhatsApp');
       }
     } catch (e) {

@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
+import '../../../../core/errors/failures.dart';
 import '../../domain/entities/company_info.dart';
 import '../../domain/repositories/company_repository.dart';
 import '../datasources/company_remote_datasource.dart';
@@ -16,7 +16,7 @@ class CompanyRepositoryImpl implements CompanyRepository {
       final companyInfo = await remoteDataSource.getCompanyInfo();
       return Right(companyInfo.toEntity());
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
@@ -43,7 +43,7 @@ class CompanyRepositoryImpl implements CompanyRepository {
       await remoteDataSource.updateCompanyInfo(model);
       return const Right(null);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 }

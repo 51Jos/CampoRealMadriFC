@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../company/data/datasources/company_remote_datasource.dart';
 import '../../domain/entities/booking.dart';
 import '../models/booking_model.dart';
 import '../models/time_slot_model.dart';
@@ -36,12 +37,19 @@ abstract class BookingRemoteDataSource {
 
 class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
   final FirebaseFirestore firestore;
+  final CompanyRemoteDataSource companyDataSource;
 
-  BookingRemoteDataSourceImpl({required this.firestore});
+  BookingRemoteDataSourceImpl({
+    required this.firestore,
+    required this.companyDataSource,
+  });
 
   @override
   Future<List<TimeSlotModel>> getAvailableTimeSlots(DateTime date) async {
     try {
+      // Obtener configuración de la empresa
+      final companyInfo = await companyDataSource.getCompanyInfo();
+
       // UNA SOLA CONSULTA para todas las reservas del día
       final baseDate = DateTime(date.year, date.month, date.day);
       final bookingsSnapshot = await firestore
@@ -63,17 +71,19 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         }
       }
 
-      // Generar horarios de 6am a 10pm
+      // Generar horarios usando la configuración de la empresa
       final timeSlots = <TimeSlotModel>[];
-      for (int hour = 6; hour <= 22; hour++) {
+      for (int hour = companyInfo.startHour; hour <= companyInfo.endHour; hour++) {
         final startTime = baseDate.add(Duration(hours: hour));
         final endTime = startTime.add(const Duration(hours: 1));
 
         // Verificar disponibilidad directamente desde el set
         final isAvailable = !occupiedHours.contains(hour);
 
-        // Precio diferenciado: día (6am-6pm) vs noche (6pm-11pm)
-        final pricePerHour = hour < 18 ? 50.0 : 70.0;
+        // Precio diferenciado según hora de inicio de tarifa nocturna
+        final pricePerHour = hour < companyInfo.nightStartHour
+            ? companyInfo.dayPrice
+            : companyInfo.nightPrice;
 
         timeSlots.add(TimeSlotModel(
           id: '${date.toIso8601String()}_$hour',
@@ -98,7 +108,18 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
     required int durationHours,
   }) async {
     try {
-      final totalPrice = durationHours * 50.0; // 50 soles por hora
+      // Obtener configuración de la empresa para calcular precio
+      final companyInfo = await companyDataSource.getCompanyInfo();
+
+      // Calcular precio total basado en las horas reservadas
+      double totalPrice = 0.0;
+      for (int i = 0; i < durationHours; i++) {
+        final hour = startTime.hour + i;
+        final pricePerHour = hour < companyInfo.nightStartHour
+            ? companyInfo.dayPrice
+            : companyInfo.nightPrice;
+        totalPrice += pricePerHour;
+      }
 
       final booking = BookingModel(
         id: '', // Se generará por Firestore
@@ -245,7 +266,18 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
     String? clientEmail,
   }) async {
     try {
-      final totalPrice = durationHours * 50.0; // 50 soles por hora
+      // Obtener configuración de la empresa para calcular precio
+      final companyInfo = await companyDataSource.getCompanyInfo();
+
+      // Calcular precio total basado en las horas reservadas
+      double totalPrice = 0.0;
+      for (int i = 0; i < durationHours; i++) {
+        final hour = startTime.hour + i;
+        final pricePerHour = hour < companyInfo.nightStartHour
+            ? companyInfo.dayPrice
+            : companyInfo.nightPrice;
+        totalPrice += pricePerHour;
+      }
 
       final booking = BookingModel(
         id: '', // Se generará por Firestore

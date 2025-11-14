@@ -91,12 +91,41 @@ Future<void> initializeDependencies() async {
   );
 
   // ============================================================================
+  // FEATURE: COMPANY
+  // ============================================================================
+
+  // Data sources
+  sl.registerLazySingleton<CompanyRemoteDataSource>(
+    () => CompanyRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  // Repository
+  sl.registerLazySingleton<CompanyRepository>(
+    () => CompanyRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Use cases
+  sl.registerLazySingleton(() => GetCompanyInfo(sl()));
+  sl.registerLazySingleton(() => UpdateCompanyInfo(sl()));
+
+  // BLoC
+  sl.registerFactory(
+    () => CompanyBloc(
+      getCompanyInfo: sl(),
+      updateCompanyInfo: sl(),
+    ),
+  );
+
+  // ============================================================================
   // FEATURE: BOOKING
   // ============================================================================
 
   // Data sources
   sl.registerLazySingleton<BookingRemoteDataSource>(
-    () => BookingRemoteDataSourceImpl(firestore: sl()),
+    () => BookingRemoteDataSourceImpl(
+      firestore: sl(),
+      companyDataSource: sl(),
+    ),
   );
 
   // Repository
@@ -140,32 +169,6 @@ Future<void> initializeDependencies() async {
       confirmBookingUseCase: sl(),
       rejectBookingUseCase: sl(),
       createAdminBooking: sl(),
-    ),
-  );
-
-  // ============================================================================
-  // FEATURE: COMPANY
-  // ============================================================================
-
-  // Data sources
-  sl.registerLazySingleton<CompanyRemoteDataSource>(
-    () => CompanyRemoteDataSourceImpl(firestore: sl()),
-  );
-
-  // Repository
-  sl.registerLazySingleton<CompanyRepository>(
-    () => CompanyRepositoryImpl(remoteDataSource: sl()),
-  );
-
-  // Use cases
-  sl.registerLazySingleton(() => GetCompanyInfo(sl()));
-  sl.registerLazySingleton(() => UpdateCompanyInfo(sl()));
-
-  // BLoC
-  sl.registerFactory(
-    () => CompanyBloc(
-      getCompanyInfo: sl(),
-      updateCompanyInfo: sl(),
     ),
   );
 }

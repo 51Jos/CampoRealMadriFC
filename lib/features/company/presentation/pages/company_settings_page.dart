@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../booking/presentation/widgets/responsive_constants.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/company_info.dart';
 import '../bloc/company_bloc.dart';
 import '../bloc/company_event.dart';
@@ -31,7 +32,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
 
   CompanyInfo? _currentInfo;
   GoogleMapController? _mapController;
-  LatLng _selectedLocation = const LatLng(-12.0464, -77.0428); // Default Lima
+  LatLng _selectedLocation = const LatLng(-12.0464, -77.0428);
   Set<Marker> _markers = {};
 
   // Horarios
@@ -69,7 +70,6 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     _startHour = info.startHour;
     _endHour = info.endHour;
 
-    // Actualizar ubicación en el mapa
     _selectedLocation = LatLng(info.latitude, info.longitude);
     _updateMarker(_selectedLocation);
   }
@@ -107,116 +107,252 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Configuración de Empresa', style: TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: BlocConsumer<CompanyBloc, CompanyState>(
-        listener: (context, state) {
-          if (state is CompanyLoaded) {
-            _loadInfoToControllers(state.companyInfo);
-          } else if (state is CompanyUpdated) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Información actualizada exitosamente'),
-                backgroundColor: Colors.green,
+      body: Row(
+        children: [
+          // NavigationRail lateral (igual que el dashboard)
+          NavigationRail(
+            extended: MediaQuery.of(context).size.width > 1200,
+            backgroundColor: Colors.white,
+            elevation: 1,
+            labelType: MediaQuery.of(context).size.width > 1200
+                ? NavigationRailLabelType.none
+                : NavigationRailLabelType.all,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.admin_panel_settings,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  if (MediaQuery.of(context).size.width > 1200) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Admin',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            );
-            Navigator.pop(context);
-          } else if (state is CompanyError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
+            ),
+            trailing: Expanded(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.red),
+                    tooltip: 'Cerrar sesión',
+                    onPressed: () {
+                      context.read<AuthBloc>().add(SignOutRequested());
+                      context.go('/admin/login');
+                    },
+                  ),
+                ),
               ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is CompanyLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          }
-
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final breakpoint = ResponsiveUtils.getBreakpoint(constraints.maxWidth);
-              return _buildResponsiveContent(breakpoint);
+            ),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard),
+                label: Text('Reservas'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: Text('Configuración'),
+              ),
+            ],
+            selectedIndex: 1, // Configuración está seleccionada
+            onDestinationSelected: (index) {
+              if (index == 0) {
+                context.go('/admin/dashboard');
+              }
             },
-          );
-        },
+            selectedIconTheme: const IconThemeData(
+              color: AppColors.primary,
+              size: 28,
+            ),
+            unselectedIconTheme: IconThemeData(
+              color: Colors.grey.shade600,
+              size: 24,
+            ),
+            selectedLabelTextStyle: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelTextStyle: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 12,
+            ),
+            indicatorColor: AppColors.primary.withValues(alpha: 0.1),
+          ),
+
+          const VerticalDivider(thickness: 1, width: 1),
+
+          // Contenido principal
+          Expanded(
+            child: BlocConsumer<CompanyBloc, CompanyState>(
+              listener: (context, state) {
+                if (state is CompanyLoaded) {
+                  _loadInfoToControllers(state.companyInfo);
+                } else if (state is CompanyUpdated) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Información actualizada exitosamente'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else if (state is CompanyError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is CompanyLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                }
+
+                return Container(
+                  color: Colors.grey.shade50,
+                  child: Column(
+                    children: [
+                      _buildHeader(),
+                      Expanded(
+                        child: _buildContent(),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildResponsiveContent(ScreenBreakpoint breakpoint) {
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Text(
+            'Configuración de Empresa',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Spacer(),
+          ElevatedButton.icon(
+            onPressed: _saveChanges,
+            icon: const Icon(Icons.save),
+            label: const Text('Guardar Cambios'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
     return Center(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 800),
+        constraints: const BoxConstraints(maxWidth: 1000),
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(ResponsiveUtils.getPadding(breakpoint)),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionTitle('Información General', breakpoint),
-                _buildTextField(_nameController, 'Nombre de la Empresa', Icons.business, breakpoint),
-                _buildTextField(_descriptionController, 'Descripción', Icons.description, breakpoint, maxLines: 3),
+                _buildSectionTitle('Información General'),
+                _buildTextField(_nameController, 'Nombre de la Empresa', Icons.business, maxLines: 1),
+                _buildTextField(_descriptionController, 'Descripción', Icons.description, maxLines: 3),
 
-                SizedBox(height: ResponsiveUtils.getSpacing(breakpoint) * 2),
-                _buildSectionTitle('Ubicación', breakpoint),
-                _buildTextField(_addressController, 'Dirección', Icons.location_on, breakpoint),
-                SizedBox(height: ResponsiveUtils.getSpacing(breakpoint)),
-                _buildMapSection(breakpoint),
+                const SizedBox(height: 32),
+                _buildSectionTitle('Ubicación'),
+                _buildTextField(_addressController, 'Dirección', Icons.location_on, maxLines: 1),
+                const SizedBox(height: 16),
+                _buildMapSection(),
 
-                SizedBox(height: ResponsiveUtils.getSpacing(breakpoint) * 2),
-                _buildSectionTitle('Contacto', breakpoint),
-                _buildTextField(_phoneController, 'Teléfono', Icons.phone, breakpoint),
-                _buildTextField(_yapeController, 'Número Yape', Icons.payment, breakpoint),
-
-                SizedBox(height: ResponsiveUtils.getSpacing(breakpoint) * 2),
-                _buildSectionTitle('Horario de Atención', breakpoint),
-                _buildHourSelectors(breakpoint),
-
-                SizedBox(height: ResponsiveUtils.getSpacing(breakpoint) * 2),
-                _buildSectionTitle('Precios', breakpoint),
-                _buildResponsiveRow(
-                  breakpoint,
-                  [
-                    Expanded(child: _buildTextField(_dayPriceController, 'Precio Día (S/)', Icons.wb_sunny, breakpoint, isNumber: true)),
-                    SizedBox(width: ResponsiveUtils.getSpacing(breakpoint)),
-                    Expanded(child: _buildTextField(_nightPriceController, 'Precio Noche (S/)', Icons.nights_stay, breakpoint, isNumber: true)),
+                const SizedBox(height: 32),
+                _buildSectionTitle('Contacto'),
+                Row(
+                  children: [
+                    Expanded(child: _buildTextField(_phoneController, 'Teléfono', Icons.phone, maxLines: 1)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildTextField(_yapeController, 'Número Yape', Icons.payment, maxLines: 1)),
                   ],
                 ),
-                _buildTextField(_nightStartHourController, 'Hora Inicio Tarifa Noche (0-23)', Icons.access_time, breakpoint, isNumber: true),
 
-                SizedBox(height: ResponsiveUtils.getSpacing(breakpoint) * 3),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _saveChanges,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        vertical: ResponsiveUtils.getSpacing(breakpoint),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 32),
+                _buildSectionTitle('Horario de Atención'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildHourSelector(
+                        'Hora de Inicio',
+                        _startHour,
+                        (value) => setState(() => _startHour = value),
                       ),
                     ),
-                    child: Text(
-                      'Guardar Cambios',
-                      style: TextStyle(
-                        fontSize: ResponsiveUtils.getBodySize(breakpoint),
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildHourSelector(
+                        'Hora de Cierre',
+                        _endHour,
+                        (value) => setState(() => _endHour = value),
                       ),
                     ),
-                  ),
+                  ],
                 ),
+
+                const SizedBox(height: 32),
+                _buildSectionTitle('Precios'),
+                Row(
+                  children: [
+                    Expanded(child: _buildTextField(_dayPriceController, 'Precio Día (S/)', Icons.wb_sunny, isNumber: true, maxLines: 1)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildTextField(_nightPriceController, 'Precio Noche (S/)', Icons.nights_stay, isNumber: true, maxLines: 1)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(_nightStartHourController, 'Hora Inicio Tarifa Noche (0-23)', Icons.access_time, isNumber: true, maxLines: 1),
               ],
             ),
           ),
@@ -225,7 +361,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     );
   }
 
-  Widget _buildMapSection(ScreenBreakpoint breakpoint) {
+  Widget _buildMapSection() {
     return Container(
       height: 300,
       decoration: BoxDecoration(
@@ -251,32 +387,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     );
   }
 
-  Widget _buildHourSelectors(ScreenBreakpoint breakpoint) {
-    return _buildResponsiveRow(
-      breakpoint,
-      [
-        Expanded(
-          child: _buildHourSelector(
-            'Hora de Inicio',
-            _startHour,
-            (value) => setState(() => _startHour = value),
-            breakpoint,
-          ),
-        ),
-        SizedBox(width: ResponsiveUtils.getSpacing(breakpoint)),
-        Expanded(
-          child: _buildHourSelector(
-            'Hora de Cierre',
-            _endHour,
-            (value) => setState(() => _endHour = value),
-            breakpoint,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHourSelector(String label, int currentHour, Function(int) onChanged, ScreenBreakpoint breakpoint) {
+  Widget _buildHourSelector(String label, int currentHour, Function(int) onChanged) {
     return InkWell(
       onTap: () async {
         final selected = await showDialog<int>(
@@ -293,7 +404,6 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(fontSize: ResponsiveUtils.getBodySize(breakpoint)),
           prefixIcon: const Icon(Icons.access_time, color: AppColors.primary),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -307,10 +417,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
             borderSide: const BorderSide(color: AppColors.primary, width: 2),
           ),
         ),
-        child: Text(
-          _formatHour(currentHour),
-          style: TextStyle(fontSize: ResponsiveUtils.getBodySize(breakpoint)),
-        ),
+        child: Text(_formatHour(currentHour)),
       ),
     );
   }
@@ -322,29 +429,13 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     return '${hour - 12}:00 PM';
   }
 
-  Widget _buildResponsiveRow(ScreenBreakpoint breakpoint, List<Widget> children) {
-    // En móvil muestra columna, en tablet+ muestra fila
-    if (breakpoint == ScreenBreakpoint.mobile) {
-      return Column(
-        children: children.map((child) {
-          if (child is SizedBox) return child;
-          return Padding(
-            padding: EdgeInsets.only(bottom: ResponsiveUtils.getSpacing(breakpoint)),
-            child: child,
-          );
-        }).toList(),
-      );
-    }
-    return Row(children: children);
-  }
-
-  Widget _buildSectionTitle(String title, ScreenBreakpoint breakpoint) {
+  Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: EdgeInsets.only(bottom: ResponsiveUtils.getSpacing(breakpoint)),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: ResponsiveUtils.getSubtitleSize(breakpoint),
+        style: const TextStyle(
+          fontSize: 20,
           fontWeight: FontWeight.bold,
           color: AppColors.primary,
         ),
@@ -355,21 +446,18 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
   Widget _buildTextField(
     TextEditingController controller,
     String label,
-    IconData icon,
-    ScreenBreakpoint breakpoint, {
+    IconData icon, {
     int maxLines = 1,
     bool isNumber = false,
   }) {
     return Padding(
-      padding: EdgeInsets.only(bottom: ResponsiveUtils.getSpacing(breakpoint)),
+      padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        style: TextStyle(fontSize: ResponsiveUtils.getBodySize(breakpoint)),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(fontSize: ResponsiveUtils.getBodySize(breakpoint)),
           prefixIcon: Icon(icon, color: AppColors.primary),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),

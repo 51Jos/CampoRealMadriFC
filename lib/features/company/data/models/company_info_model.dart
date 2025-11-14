@@ -12,7 +12,8 @@ class CompanyInfoModel extends CompanyInfo {
     required super.phoneNumber,
     required super.yapeNumber,
     required super.bankAccounts,
-    required super.schedule,
+    required super.startHour,
+    required super.endHour,
     required super.dayPrice,
     required super.nightPrice,
     required super.nightStartHour,
@@ -35,7 +36,8 @@ class CompanyInfoModel extends CompanyInfo {
               ?.map((account) => BankAccountModel.fromMap(account))
               .toList() ??
           [],
-      schedule: data['schedule'] ?? '',
+      startHour: data['startHour'] ?? 8,
+      endHour: data['endHour'] ?? 22,
       dayPrice: (data['dayPrice'] ?? 0.0).toDouble(),
       nightPrice: (data['nightPrice'] ?? 0.0).toDouble(),
       nightStartHour: data['nightStartHour'] ?? 18,
@@ -55,7 +57,8 @@ class CompanyInfoModel extends CompanyInfo {
       'bankAccounts': bankAccounts
           .map((account) => (account as BankAccountModel).toMap())
           .toList(),
-      'schedule': schedule,
+      'startHour': startHour,
+      'endHour': endHour,
       'dayPrice': dayPrice,
       'nightPrice': nightPrice,
       'nightStartHour': nightStartHour,
@@ -74,7 +77,8 @@ class CompanyInfoModel extends CompanyInfo {
       phoneNumber: phoneNumber,
       yapeNumber: yapeNumber,
       bankAccounts: bankAccounts,
-      schedule: schedule,
+      startHour: startHour,
+      endHour: endHour,
       dayPrice: dayPrice,
       nightPrice: nightPrice,
       nightStartHour: nightStartHour,

@@ -7,6 +7,7 @@ import '../../../../shared/widgets/responsive_layout.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../booking/domain/entities/booking.dart';
 import '../../../booking/presentation/widgets/responsive_constants.dart';
+import '../../../company/domain/entities/company_info.dart';
 import '../../../company/domain/repositories/company_repository.dart';
 import '../../../company/domain/usecases/get_company_info.dart';
 import '../bloc/admin_bloc.dart';
@@ -26,6 +27,28 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Booking? _selectedBooking;
   String? _currentFilter;
   final _whatsappService = WhatsAppService();
+  CompanyInfo? _companyInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompanyInfo();
+  }
+
+  Future<void> _loadCompanyInfo() async {
+    final getCompanyInfo = GetCompanyInfo(context.read<CompanyRepository>());
+    final result = await getCompanyInfo();
+    result.fold(
+      (failure) => null,
+      (info) {
+        if (mounted) {
+          setState(() {
+            _companyInfo = info;
+          });
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -208,6 +231,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               child: Column(
                 children: [
                   _buildDesktopHeader(),
+                  if (_companyInfo != null) _buildCompanyInfoCard(),
                   _buildFilterChips(ScreenBreakpoint.desktop),
                   Expanded(
                     child: LayoutBuilder(
@@ -257,6 +281,114 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCompanyInfoCard() {
+    if (_companyInfo == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.business,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _companyInfo!.name,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _companyInfo!.description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 24,
+            runSpacing: 12,
+            children: [
+              _buildInfoItem(
+                Icons.location_on,
+                _companyInfo!.address,
+              ),
+              _buildInfoItem(
+                Icons.schedule,
+                _companyInfo!.scheduleFormatted,
+              ),
+              _buildInfoItem(
+                Icons.phone,
+                _companyInfo!.phoneNumber,
+              ),
+              _buildInfoItem(
+                Icons.wb_sunny,
+                'Día: S/ ${_companyInfo!.dayPrice.toStringAsFixed(0)}/h',
+              ),
+              _buildInfoItem(
+                Icons.nights_stay,
+                'Noche: S/ ${_companyInfo!.nightPrice.toStringAsFixed(0)}/h',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: AppColors.primary),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey.shade700,
+          ),
+        ),
+      ],
     );
   }
 

@@ -11,7 +11,8 @@ class CompanyInfo extends Equatable {
   final String phoneNumber;
   final String yapeNumber;
   final List<BankAccount> bankAccounts;
-  final String schedule; // Ej: "Lunes a Domingo: 8:00 AM - 10:00 PM"
+  final int startHour; // Hora de inicio (0-23)
+  final int endHour; // Hora de fin (0-23)
   final double dayPrice; // Precio por hora de día
   final double nightPrice; // Precio por hora de noche
   final int nightStartHour; // Hora en que empieza tarifa nocturna (ej: 18)
@@ -27,7 +28,8 @@ class CompanyInfo extends Equatable {
     required this.phoneNumber,
     required this.yapeNumber,
     required this.bankAccounts,
-    required this.schedule,
+    required this.startHour,
+    required this.endHour,
     required this.dayPrice,
     required this.nightPrice,
     required this.nightStartHour,
@@ -51,6 +53,17 @@ class CompanyInfo extends Equatable {
         .join('\n');
   }
 
+  /// Obtiene el horario formateado
+  String get scheduleFormatted {
+    String formatHour(int hour) {
+      if (hour == 0) return '12:00 AM';
+      if (hour < 12) return '$hour:00 AM';
+      if (hour == 12) return '12:00 PM';
+      return '${hour - 12}:00 PM';
+    }
+    return '${formatHour(startHour)} - ${formatHour(endHour)}';
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -62,7 +75,8 @@ class CompanyInfo extends Equatable {
         phoneNumber,
         yapeNumber,
         bankAccounts,
-        schedule,
+        startHour,
+        endHour,
         dayPrice,
         nightPrice,
         nightStartHour,

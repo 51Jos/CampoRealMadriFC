@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import '../../../../config/dependency_injection/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../company/domain/entities/company_info.dart';
+import '../../../company/domain/usecases/get_company_info.dart';
 import '../bloc/booking_bloc.dart';
 import '../bloc/booking_event.dart';
 import '../bloc/booking_state.dart';
@@ -20,11 +23,31 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
+  CompanyInfo? _companyInfo;
 
   @override
   void initState() {
     super.initState();
+    _loadCompanyInfo();
     _loadTimeSlots();
+  }
+
+  Future<void> _loadCompanyInfo() async {
+    final getCompanyInfo = sl<GetCompanyInfo>();
+    final result = await getCompanyInfo();
+
+    result.fold(
+      (failure) {
+        // Error loading company info, will use default values from timeSlots
+      },
+      (companyInfo) {
+        if (mounted) {
+          setState(() {
+            _companyInfo = companyInfo;
+          });
+        }
+      },
+    );
   }
 
   void _loadTimeSlots() {
@@ -428,41 +451,52 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           SizedBox(height: padding * 0.5),
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: padding * 0.75,
-              vertical: padding * 0.5,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Wrap(
-              spacing: padding * 0.75,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Icon(Icons.wb_sunny, size: 14, color: Colors.orange.shade700),
-                Text(
-                  'Día: S/50',
-                  style: TextStyle(
-                    fontSize: _getSubtitleFontSize(width) - 3,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
+          if (_companyInfo != null)
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: padding * 0.75,
+                vertical: padding * 0.5,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Wrap(
+                spacing: padding * 0.75,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Icon(Icons.access_time, size: 14, color: Colors.blue.shade700),
+                  Text(
+                    '${_companyInfo!.startHour}:00 - ${_companyInfo!.endHour}:00',
+                    style: TextStyle(
+                      fontSize: _getSubtitleFontSize(width) - 3,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
+                    ),
                   ),
-                ),
-                Icon(Icons.nightlight_round, size: 14, color: Colors.indigo.shade700),
-                Text(
-                  'Noche: S/70',
-                  style: TextStyle(
-                    fontSize: _getSubtitleFontSize(width) - 3,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
+                  SizedBox(width: padding * 0.5),
+                  Icon(Icons.wb_sunny, size: 14, color: Colors.orange.shade700),
+                  Text(
+                    'Día: S/${_companyInfo!.dayPrice.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: _getSubtitleFontSize(width) - 3,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
+                    ),
                   ),
-                ),
-              ],
+                  Icon(Icons.nightlight_round, size: 14, color: Colors.indigo.shade700),
+                  Text(
+                    'Noche: S/${_companyInfo!.nightPrice.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: _getSubtitleFontSize(width) - 3,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           SizedBox(height: padding * 0.75),
           GridView.builder(
             shrinkWrap: true,

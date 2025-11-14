@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import '../../features/booking/domain/entities/booking.dart';
 
@@ -96,9 +95,11 @@ _Sintético Lima_
       print('Can launch WhatsApp URL: $canLaunch');
 
       if (canLaunch) {
+        // LaunchMode.externalApplication funciona mejor en todas las plataformas
+        // En iOS y Android abre WhatsApp app, en Web abre WhatsApp Web en nueva pestaña
         final result = await launchUrl(
           url,
-          mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+          mode: LaunchMode.externalApplication,
         );
         print('Launch result: $result');
         return result;

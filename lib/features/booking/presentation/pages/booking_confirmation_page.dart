@@ -559,16 +559,21 @@ class _BookingConfirmationPageState extends State<BookingConfirmationPage> {
     ''';
 
     final encodedMessage = Uri.encodeComponent(message);
-    final whatsappUrl = Uri.parse('whatsapp://send?text=$encodedMessage');
+
+    // Usar https://api.whatsapp.com/send para compatibilidad web/móvil/iOS
+    final whatsappUrl = Uri.parse('https://api.whatsapp.com/send?text=$encodedMessage');
 
     try {
-      if (await canLaunchUrl(whatsappUrl)) {
-        await launchUrl(whatsappUrl);
+      final canLaunch = await canLaunchUrl(whatsappUrl);
+
+      if (canLaunch) {
+        // LaunchMode.externalApplication funciona en iOS, Android y Web
+        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('No se pudo abrir WhatsApp'),
+              content: Text('No se pudo abrir WhatsApp. Asegúrate de tenerlo instalado.'),
               backgroundColor: Colors.red,
             ),
           );

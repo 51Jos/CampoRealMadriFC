@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../config/dependency_injection/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../company/domain/entities/company_info.dart';
+import '../../../company/domain/usecases/get_company_info.dart';
 import '../../domain/entities/booking.dart';
 
-class BookingConfirmationPage extends StatelessWidget {
+class BookingConfirmationPage extends StatefulWidget {
   final Booking booking;
-
-  // Información del campo deportivo (hardcoded por ahora)
-  static const String fieldName = 'Real Madrid FC';
-  static const String fieldAddress = 'Av. Example 123, Lima, Perú';
-  static const String fieldPhone = '+51987654321';
-  static const double fieldLatitude = -12.0464; // Ejemplo: Centro de Lima
-  static const double fieldLongitude = -77.0428;
 
   const BookingConfirmationPage({
     super.key,
@@ -20,7 +16,115 @@ class BookingConfirmationPage extends StatelessWidget {
   });
 
   @override
+  State<BookingConfirmationPage> createState() => _BookingConfirmationPageState();
+}
+
+class _BookingConfirmationPageState extends State<BookingConfirmationPage> {
+  CompanyInfo? _companyInfo;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompanyInfo();
+  }
+
+  Future<void> _loadCompanyInfo() async {
+    final getCompanyInfo = sl<GetCompanyInfo>();
+    final result = await getCompanyInfo();
+
+    result.fold(
+      (failure) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      },
+      (companyInfo) {
+        if (mounted) {
+          setState(() {
+            _companyInfo = companyInfo;
+            _isLoading = false;
+          });
+        }
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: AppColors.primary,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text(
+            'Confirmación de Reserva',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+
+    if (_companyInfo == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: AppColors.primary,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text(
+            'Confirmación de Reserva',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Error al cargar información',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'No se pudo cargar la información de la empresa',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+                child: const Text('Volver'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -194,35 +298,35 @@ class BookingConfirmationPage extends StatelessWidget {
           _buildDetailRow(
             Icons.calendar_today,
             'Fecha',
-            dateFormat.format(booking.date),
+            dateFormat.format(widget.booking.date),
             width,
           ),
           SizedBox(height: padding),
           _buildDetailRow(
             Icons.access_time,
             'Hora',
-            '${timeFormat.format(booking.startTime)} - ${timeFormat.format(booking.endTime)}',
+            '${timeFormat.format(widget.booking.startTime)} - ${timeFormat.format(widget.booking.endTime)}',
             width,
           ),
           SizedBox(height: padding),
           _buildDetailRow(
             Icons.timer,
             'Duración',
-            '${booking.durationHours} ${booking.durationHours == 1 ? 'hora' : 'horas'}',
+            '${widget.booking.durationHours} ${widget.booking.durationHours == 1 ? 'hora' : 'horas'}',
             width,
           ),
           SizedBox(height: padding),
           _buildDetailRow(
             Icons.attach_money,
             'Total',
-            'S/ ${booking.totalPrice.toStringAsFixed(2)}',
+            'S/ ${widget.booking.totalPrice.toStringAsFixed(2)}',
             width,
           ),
           SizedBox(height: padding),
           _buildDetailRow(
             Icons.confirmation_number,
             'ID de Reserva',
-            '#${booking.id.substring(0, 8).toUpperCase()}',
+            '#${widget.booking.id.substring(0, 8).toUpperCase()}',
             width,
           ),
         ],
@@ -311,7 +415,7 @@ class BookingConfirmationPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      fieldName,
+                      _companyInfo!.name,
                       style: TextStyle(
                         fontSize: titleSize,
                         fontWeight: FontWeight.bold,
@@ -337,7 +441,7 @@ class BookingConfirmationPage extends StatelessWidget {
               SizedBox(width: padding * 0.5),
               Expanded(
                 child: Text(
-                  fieldAddress,
+                  _companyInfo!.address,
                   style: TextStyle(
                     fontSize: subtitleSize,
                     color: Colors.grey.shade700,
@@ -439,14 +543,17 @@ class BookingConfirmationPage extends StatelessWidget {
     final message = '''
 ⚽ *RESERVA CONFIRMADA* ⚽
 
-📍 *Campo:* $fieldName
-📅 *Fecha:* ${dateFormat.format(booking.date)}
-⏰ *Hora:* ${timeFormat.format(booking.startTime)} - ${timeFormat.format(booking.endTime)}
-⏱️ *Duración:* ${booking.durationHours} ${booking.durationHours == 1 ? 'hora' : 'horas'}
-💰 *Total:* S/ ${booking.totalPrice.toStringAsFixed(2)}
+📍 *Campo:* ${_companyInfo!.name}
+📅 *Fecha:* ${dateFormat.format(widget.booking.date)}
+⏰ *Hora:* ${timeFormat.format(widget.booking.startTime)} - ${timeFormat.format(widget.booking.endTime)}
+⏱️ *Duración:* ${widget.booking.durationHours} ${widget.booking.durationHours == 1 ? 'hora' : 'horas'}
+💰 *Total:* S/ ${widget.booking.totalPrice.toStringAsFixed(2)}
 
-📍 *Dirección:* $fieldAddress
-🆔 *Código:* #${booking.id.substring(0, 8).toUpperCase()}
+📍 *Dirección:* ${_companyInfo!.address}
+🆔 *Código:* #${widget.booking.id.substring(0, 8).toUpperCase()}
+
+📱 *Contacto:* ${_companyInfo!.phoneNumber}
+📍 *Cómo llegar:* ${_companyInfo!.googleMapsLink}
 
 ¡Nos vemos en la cancha! 🎉
     ''';
@@ -480,9 +587,7 @@ class BookingConfirmationPage extends StatelessWidget {
   }
 
   Future<void> _openGoogleMaps(BuildContext context) async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$fieldLatitude,$fieldLongitude',
-    );
+    final url = Uri.parse(_companyInfo!.googleMapsLink);
 
     try {
       if (await canLaunchUrl(url)) {

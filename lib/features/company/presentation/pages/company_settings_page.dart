@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/company_info.dart';
@@ -31,9 +32,8 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
   late TextEditingController _nightStartHourController;
 
   CompanyInfo? _currentInfo;
-  GoogleMapController? _mapController;
-  LatLng _selectedLocation = const LatLng(-12.0464, -77.0428);
-  Set<Marker> _markers = {};
+  final MapController _mapController = MapController();
+  LatLng _selectedLocation = LatLng(-12.0464, -77.0428);
 
   // Horarios
   int _startHour = 8;
@@ -70,24 +70,10 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     _startHour = info.startHour;
     _endHour = info.endHour;
 
-    _selectedLocation = LatLng(info.latitude, info.longitude);
-    _updateMarker(_selectedLocation);
-  }
-
-  void _updateMarker(LatLng position) {
     setState(() {
-      _selectedLocation = position;
-      _markers = {
-        Marker(
-          markerId: const MarkerId('company_location'),
-          position: position,
-          draggable: true,
-          onDragEnd: (newPosition) {
-            _updateMarker(newPosition);
-          },
-        ),
-      };
+      _selectedLocation = LatLng(info.latitude, info.longitude);
     });
+    _mapController.move(_selectedLocation, 15);
   }
 
   @override
@@ -100,7 +86,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     _dayPriceController.dispose();
     _nightPriceController.dispose();
     _nightStartHourController.dispose();
-    _mapController?.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -109,7 +95,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     return Scaffold(
       body: Row(
         children: [
-          // NavigationRail lateral (igual que el dashboard)
+          // NavigationRail lateral
           NavigationRail(
             extended: MediaQuery.of(context).size.width > 1200,
             backgroundColor: Colors.white,
@@ -176,7 +162,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
                 label: Text('Configuración'),
               ),
             ],
-            selectedIndex: 1, // Configuración está seleccionada
+            selectedIndex: 1,
             onDestinationSelected: (index) {
               if (index == 0) {
                 context.go('/admin/dashboard');
@@ -363,26 +349,56 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
 
   Widget _buildMapSection() {
     return Container(
-      height: 300,
+      height: 350,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
       ),
       clipBehavior: Clip.antiAlias,
-      child: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: _selectedLocation,
-          zoom: 15,
+      child: FlutterMap(
+        mapController: _mapController,
+        options: MapOptions(
+          initialCenter: _selectedLocation,
+          initialZoom: 15,
+          onTap: (tapPosition, point) {
+            setState(() {
+              _selectedLocation = point;
+            });
+          },
         ),
-        markers: _markers,
-        onMapCreated: (controller) {
-          _mapController = controller;
-        },
-        onTap: (position) {
-          _updateMarker(position);
-        },
-        myLocationButtonEnabled: true,
-        zoomControlsEnabled: true,
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.sinteticolima.app',
+          ),
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: _selectedLocation,
+                width: 40,
+                height: 40,
+                child: GestureDetector(
+                  onPanUpdate: (details) {
+                    // Convertir el delta del drag a coordenadas del mapa
+                    final latDelta = details.delta.dy * 0.00001;
+                    final lngDelta = details.delta.dx * 0.00001;
+                    setState(() {
+                      _selectedLocation = LatLng(
+                        _selectedLocation.latitude - latDelta,
+                        _selectedLocation.longitude + lngDelta,
+                      );
+                    });
+                  },
+                  child: const Icon(
+                    Icons.location_on,
+                    color: AppColors.primary,
+                    size: 40,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

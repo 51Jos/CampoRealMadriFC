@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../config/dependency_injection/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../company/domain/entities/company_info.dart';
+import '../../../company/domain/usecases/get_company_info.dart';
 import '../../domain/entities/booking.dart';
 import '../bloc/booking_bloc.dart';
 import '../bloc/booking_event.dart';
@@ -29,13 +32,33 @@ class BookingsHistoryPage extends StatefulWidget {
 class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
   BookingStatus? _selectedFilter;
   Booking? _selectedBooking;
+  CompanyInfo? _companyInfo;
 
   @override
   void initState() {
     super.initState();
+    _loadCompanyInfo();
     if (!widget.skipInitialLoad) {
       _loadBookings();
     }
+  }
+
+  Future<void> _loadCompanyInfo() async {
+    final getCompanyInfo = sl<GetCompanyInfo>();
+    final result = await getCompanyInfo();
+
+    result.fold(
+      (failure) {
+        // Error loading company info
+      },
+      (companyInfo) {
+        if (mounted) {
+          setState(() {
+            _companyInfo = companyInfo;
+          });
+        }
+      },
+    );
   }
 
   void _loadBookings() {
@@ -442,16 +465,46 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
   }
 
   Future<void> _launchWhatsApp() async {
-    const phoneNumber = '51999999999'; // Número del negocio
-    final url = Uri.parse('https://wa.me/$phoneNumber');
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    if (_companyInfo == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No se pudo abrir WhatsApp'),
+            content: Text('Cargando información del negocio...'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Limpiar el número de teléfono (quitar espacios, guiones, etc.)
+    final cleanPhone = _companyInfo!.phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+
+    // Si no tiene código de país, agregar +51 (Perú)
+    final phoneWithCountryCode = cleanPhone.startsWith('+')
+        ? cleanPhone.substring(1) // Quitar el + para el formato
+        : '51$cleanPhone';
+
+    final url = Uri.parse('https://api.whatsapp.com/send?phone=$phoneWithCountryCode');
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo abrir WhatsApp'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir WhatsApp: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -460,18 +513,39 @@ class _BookingsHistoryPageState extends State<BookingsHistoryPage> {
   }
 
   Future<void> _launchMaps() async {
-    // Coordenadas del Real Madrid Café Lima (ejemplo)
-    const latitude = -12.0464;
-    const longitude = -77.0428;
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    if (_companyInfo == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No se pudo abrir Google Maps'),
+            content: Text('Cargando información de ubicación...'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Usar el link de Google Maps desde CompanyInfo
+    final url = Uri.parse(_companyInfo!.googleMapsLink);
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo abrir Google Maps'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir el mapa: $e'),
             backgroundColor: Colors.red,
           ),
         );

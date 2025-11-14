@@ -7,6 +7,8 @@ import '../../../../shared/widgets/responsive_layout.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../booking/domain/entities/booking.dart';
 import '../../../booking/presentation/widgets/responsive_constants.dart';
+import '../../../company/domain/repositories/company_repository.dart';
+import '../../../company/domain/usecases/get_company_info.dart';
 import '../bloc/admin_bloc.dart';
 import '../bloc/admin_event.dart';
 import '../bloc/admin_state.dart';
@@ -28,13 +30,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AdminBloc, AdminState>(
-      listener: (context, state) {},
-      buildWhen: (previous, current) {
+      listener: (context, state) {
         // Solo cargar cuando el estado es inicial
-        if (current is AdminInitial) {
-          Future.microtask(() => context.read<AdminBloc>().add(const LoadAllBookingsEvent()));
+        if (state is AdminInitial) {
+          context.read<AdminBloc>().add(const LoadAllBookingsEvent());
         }
-        return true;
       },
       builder: (context, state) {
         return ResponsiveLayout(
@@ -810,7 +810,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     bool success = false;
 
     if (messageType == 'confirmation') {
-      success = await _whatsappService.sendBookingConfirmation(booking);
+      // Obtener información de la empresa para incluir el link de Google Maps
+      final getCompanyInfo = GetCompanyInfo(context.read<CompanyRepository>());
+      final companyResult = await getCompanyInfo();
+
+      String? mapsLink;
+      companyResult.fold(
+        (failure) => null, // Si falla, enviar sin link
+        (companyInfo) => mapsLink = companyInfo.googleMapsLink,
+      );
+
+      success = await _whatsappService.sendBookingConfirmation(
+        booking,
+        mapsLink: mapsLink,
+      );
     } else if (messageType == 'rejection') {
       success = await _whatsappService.sendBookingRejection(booking);
     } else if (messageType == 'custom') {

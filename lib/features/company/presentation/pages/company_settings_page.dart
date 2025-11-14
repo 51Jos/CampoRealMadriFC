@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../shared/widgets/responsive_layout.dart';
 import '../../../booking/presentation/widgets/responsive_constants.dart';
 import '../../domain/entities/company_info.dart';
 import '../bloc/company_bloc.dart';

@@ -6,6 +6,7 @@ import '../../features/admin/presentation/pages/admin_create_booking_page.dart';
 import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
 import '../../features/admin/presentation/pages/admin_login_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/company/domain/repositories/company_repository.dart';
 import '../../features/company/presentation/bloc/company_bloc.dart';
 import '../../features/company/presentation/pages/company_settings_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
@@ -75,12 +76,17 @@ class AppRouter {
       GoRoute(
         path: adminDashboard,
         name: 'adminDashboard',
-        builder: (context, state) => MultiBlocProvider(
+        builder: (context, state) => MultiRepositoryProvider(
           providers: [
-            BlocProvider(create: (context) => sl<AuthBloc>()..add(CheckAuthStatus())),
-            BlocProvider(create: (context) => sl<AdminBloc>()..add(const LoadAllBookingsEvent())),
+            RepositoryProvider(create: (context) => sl<CompanyRepository>()),
           ],
-          child: const AdminDashboardPage(),
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (context) => sl<AuthBloc>()..add(CheckAuthStatus())),
+              BlocProvider(create: (context) => sl<AdminBloc>()..add(const LoadAllBookingsEvent())),
+            ],
+            child: const AdminDashboardPage(),
+          ),
         ),
       ),
       GoRoute(

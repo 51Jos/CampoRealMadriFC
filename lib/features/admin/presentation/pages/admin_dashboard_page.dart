@@ -34,6 +34,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   void initState() {
     super.initState();
     _loadCompanyInfo();
+    // Resetear el índice de navegación al volver
+    _selectedNavIndex = 0;
   }
 
   Future<void> _loadCompanyInfo() async {
@@ -110,11 +112,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedNavIndex,
         onDestinationSelected: (index) {
-          setState(() {
-            _selectedNavIndex = index;
-          });
-          if (index == 1) {
-            context.push('/admin/company-settings');
+          if (index == 0) {
+            // Ya estamos en reservas, solo actualizar el índice
+            setState(() {
+              _selectedNavIndex = 0;
+            });
+          } else if (index == 1) {
+            context.push('/admin/company-settings').then((_) {
+              // Resetear índice al volver
+              if (mounted) {
+                setState(() {
+                  _selectedNavIndex = 0;
+                });
+              }
+            });
           } else if (index == 2) {
             context.read<AuthBloc>().add(SignOutRequested());
             context.go('/admin/login');

@@ -26,11 +26,14 @@ class AdminBookingDetailPage extends StatelessWidget {
         // Buscar la reserva actualizada en el estado
         Booking currentBooking = booking;
         if (state is AdminBookingsLoaded) {
-          final updatedBooking = state.bookings.firstWhere(
-            (b) => b.id == booking.id,
-            orElse: () => booking,
-          );
-          currentBooking = updatedBooking;
+          try {
+            currentBooking = state.bookings.firstWhere(
+              (b) => b.id == booking.id,
+            );
+          } catch (e) {
+            // Si no se encuentra la reserva actualizada, usar la original
+            currentBooking = booking;
+          }
         }
 
         return Scaffold(

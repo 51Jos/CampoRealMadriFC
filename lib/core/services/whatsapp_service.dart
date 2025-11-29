@@ -85,10 +85,9 @@ _Sintético Lima_
       // Codificar el mensaje para URL
       final encodedMessage = Uri.encodeComponent(message);
 
-      // Usar https://api.whatsapp.com que funciona mejor en iOS PWA
-      // Este enlace redirige automáticamente a la app de WhatsApp si está instalada
-      // o abre WhatsApp Web si no lo está
-      final url = Uri.parse('https://api.whatsapp.com/send?phone=$phoneWithCountryCode&text=$encodedMessage');
+      // Usar https://wa.me/ que funciona en iOS, Android y Web
+      // Este enlace abre WhatsApp app si está instalada o WhatsApp Web si no
+      final url = Uri.parse('https://wa.me/$phoneWithCountryCode?text=$encodedMessage');
 
       // Intentar abrir WhatsApp
       final canLaunch = await canLaunchUrl(url);

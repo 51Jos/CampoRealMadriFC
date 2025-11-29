@@ -599,7 +599,10 @@ class AdminBookingDetailPage extends StatelessWidget {
   void _showAddPaymentDialog(BuildContext context, Booking booking) {
     showDialog(
       context: context,
-      builder: (dialogContext) => _AddPaymentDialog(booking: booking),
+      builder: (dialogContext) => BlocProvider.value(
+        value: context.read<AdminBloc>(),
+        child: _AddPaymentDialog(booking: booking),
+      ),
     );
   }
 }

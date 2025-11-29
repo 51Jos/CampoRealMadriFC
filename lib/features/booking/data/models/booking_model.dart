@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/booking.dart';
+import 'payment_model.dart';
 
 /// Modelo de datos para Booking
 class BookingModel extends Booking {
@@ -20,9 +21,17 @@ class BookingModel extends Booking {
     super.clientName,
     super.clientPhone,
     super.clientEmail,
+    super.payments,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
+    // Convertir pagos desde Firestore
+    final paymentsData = json['payments'] as List<dynamic>?;
+    final payments = paymentsData
+            ?.map((p) => PaymentModel.fromFirestore(p as Map<String, dynamic>))
+            .toList() ??
+        [];
+
     return BookingModel(
       id: json['id'] as String,
       userId: json['userId'] as String,
@@ -43,6 +52,7 @@ class BookingModel extends Booking {
       clientName: json['clientName'] as String?,
       clientPhone: json['clientPhone'] as String?,
       clientEmail: json['clientEmail'] as String?,
+      payments: payments,
     );
   }
 
@@ -64,6 +74,9 @@ class BookingModel extends Booking {
       'clientName': clientName,
       'clientPhone': clientPhone,
       'clientEmail': clientEmail,
+      'payments': payments
+          .map((p) => PaymentModel.fromEntity(p).toFirestore())
+          .toList(),
     };
   }
 }

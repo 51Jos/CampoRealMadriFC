@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../company/data/datasources/company_remote_datasource.dart';
 import '../../domain/entities/booking.dart';
+import '../../domain/entities/payment.dart';
 import '../models/booking_model.dart';
+import '../models/payment_model.dart';
 import '../models/time_slot_model.dart';
 
 /// Fuente de datos remota para reservas
@@ -32,6 +34,10 @@ abstract class BookingRemoteDataSource {
     required String clientName,
     required String clientPhone,
     String? clientEmail,
+  });
+  Future<BookingModel> addPayment({
+    required String bookingId,
+    required Payment payment,
   });
 }
 
@@ -388,6 +394,40 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       );
     } catch (e) {
       throw Exception('Error al crear reserva de admin: $e');
+    }
+  }
+
+  @override
+  Future<BookingModel> addPayment({
+    required String bookingId,
+    required Payment payment,
+  }) async {
+    try {
+      final bookingRef = firestore.collection('bookings').doc(bookingId);
+      final bookingDoc = await bookingRef.get();
+
+      if (!bookingDoc.exists) {
+        throw Exception('La reserva no existe');
+      }
+
+      final bookingData = bookingDoc.data()!;
+      final currentPayments = bookingData['payments'] as List<dynamic>? ?? [];
+
+      // Convertir el nuevo pago a formato Firestore
+      final paymentModel = PaymentModel.fromEntity(payment);
+      final paymentData = paymentModel.toFirestore();
+
+      // Agregar el nuevo pago a la lista
+      currentPayments.add(paymentData);
+
+      // Actualizar la reserva con la lista de pagos actualizada
+      await bookingRef.update({'payments': currentPayments});
+
+      // Obtener la reserva actualizada
+      final updatedBooking = await getBookingById(bookingId);
+      return updatedBooking;
+    } catch (e) {
+      throw Exception('Error al agregar pago: $e');
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/booking.dart';
+import '../entities/payment.dart';
 import '../entities/time_slot.dart';
 
 /// Contrato del repositorio de reservas
@@ -48,5 +49,11 @@ abstract class BookingRepository {
     required String clientName,
     required String clientPhone,
     String? clientEmail,
+  });
+
+  /// Agrega un pago a una reserva (solo admin)
+  Future<Either<Failure, Booking>> addPayment({
+    required String bookingId,
+    required Payment payment,
   });
 }

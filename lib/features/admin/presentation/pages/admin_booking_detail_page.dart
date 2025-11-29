@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/services/whatsapp_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../booking/domain/entities/booking.dart';
+import '../../../booking/domain/entities/payment.dart';
 import '../bloc/admin_bloc.dart';
 import '../bloc/admin_event.dart';
 
@@ -63,6 +65,10 @@ class AdminBookingDetailPage extends StatelessWidget {
                 _buildInfoRow('Total', 'S/ ${booking.totalPrice.toStringAsFixed(2)}'),
               ],
             ),
+            const SizedBox(height: 24),
+
+            // Información de pagos
+            _buildPaymentSection(context, booking),
 
             if (booking.rejectionReason != null) ...[
               const SizedBox(height: 24),
@@ -428,6 +434,404 @@ class AdminBookingDetailPage extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildPaymentSection(BuildContext context, Booking booking) {
+    final totalPaid = booking.totalPaid;
+    final remaining = booking.remainingBalance;
+    final isFullyPaid = booking.isFullyPaid;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Pagos',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (!isFullyPaid)
+              ElevatedButton.icon(
+                onPressed: () => _showAddPaymentDialog(context, booking),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Registrar Pago'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Resumen de pagos
+              _buildInfoRow('Total', 'S/ ${booking.totalPrice.toStringAsFixed(2)}'),
+              _buildInfoRow(
+                'Pagado',
+                'S/ ${totalPaid.toStringAsFixed(2)}',
+              ),
+              _buildInfoRow(
+                'Pendiente',
+                'S/ ${remaining.toStringAsFixed(2)}',
+              ),
+
+              if (isFullyPaid) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green.shade700, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Pagado completamente',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Lista de pagos
+              if (booking.payments.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                const Text(
+                  'Detalle de pagos',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...booking.payments.map((payment) => _buildPaymentItem(payment)),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentItem(Payment payment) {
+    final date = payment.timestamp;
+    final dateStr = '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                payment.method.displayName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                'S/ ${payment.amount.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            dateStr,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          if (payment.method == PaymentMethod.efectivo && payment.cashReceived != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Recibido: S/ ${payment.cashReceived!.toStringAsFixed(2)} | Vuelto: S/ ${payment.change!.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showAddPaymentDialog(BuildContext context, Booking booking) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => _AddPaymentDialog(booking: booking),
+    );
+  }
+}
+
+/// Dialog para agregar un pago
+class _AddPaymentDialog extends StatefulWidget {
+  final Booking booking;
+
+  const _AddPaymentDialog({required this.booking});
+
+  @override
+  State<_AddPaymentDialog> createState() => _AddPaymentDialogState();
+}
+
+class _AddPaymentDialogState extends State<_AddPaymentDialog> {
+  PaymentMethod _selectedMethod = PaymentMethod.efectivo;
+  final _amountController = TextEditingController();
+  final _cashReceivedController = TextEditingController();
+  String? _changeMessage;
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _cashReceivedController.dispose();
+    super.dispose();
+  }
+
+  void _calculateChange() {
+    if (_selectedMethod != PaymentMethod.efectivo) return;
+
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    final cashReceived = double.tryParse(_cashReceivedController.text) ?? 0;
+
+    if (cashReceived > amount) {
+      final change = cashReceived - amount;
+      setState(() {
+        _changeMessage = 'Vuelto: S/ ${change.toStringAsFixed(2)}';
+      });
+    } else {
+      setState(() {
+        _changeMessage = null;
+      });
+    }
+  }
+
+  void _handleSubmit(BuildContext context) {
+    final amount = double.tryParse(_amountController.text);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ingresa un monto válido'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final remaining = widget.booking.remainingBalance;
+    if (amount > remaining) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('El monto no puede ser mayor al pendiente (S/ ${remaining.toStringAsFixed(2)})'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    double? cashReceived;
+    double? change;
+
+    if (_selectedMethod == PaymentMethod.efectivo) {
+      cashReceived = double.tryParse(_cashReceivedController.text);
+      if (cashReceived == null || cashReceived < amount) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('El monto recibido debe ser mayor o igual al monto del pago'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      change = cashReceived - amount;
+    }
+
+    final payment = Payment(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      method: _selectedMethod,
+      amount: amount,
+      timestamp: DateTime.now(),
+      cashReceived: cashReceived,
+      change: change,
+    );
+
+    context.read<AdminBloc>().add(AddPaymentEvent(
+          bookingId: widget.booking.id,
+          payment: payment,
+        ));
+
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = widget.booking.remainingBalance;
+
+    return AlertDialog(
+      title: const Text('Registrar Pago'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Monto pendiente: S/ ${remaining.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Método de pago
+            const Text(
+              'Método de pago',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<PaymentMethod>(
+              value: _selectedMethod,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: PaymentMethod.values.map((method) {
+                return DropdownMenuItem(
+                  value: method,
+                  child: Text(method.displayName),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedMethod = value!;
+                  _changeMessage = null;
+                  _cashReceivedController.clear();
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Monto del pago
+            const Text(
+              'Monto del pago',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _amountController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                prefixText: 'S/ ',
+                hintText: '0.00',
+              ),
+              onChanged: (_) {
+                if (_selectedMethod == PaymentMethod.efectivo) {
+                  _calculateChange();
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Campo adicional para efectivo
+            if (_selectedMethod == PaymentMethod.efectivo) ...[
+              const Text(
+                'Monto recibido',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _cashReceivedController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  prefixText: 'S/ ',
+                  hintText: '0.00',
+                ),
+                onChanged: (_) => _calculateChange(),
+              ),
+
+              if (_changeMessage != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        _changeMessage!,
+                        style: TextStyle(
+                          color: Colors.blue.shade900,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () => _handleSubmit(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Registrar'),
+        ),
+      ],
     );
   }
 }

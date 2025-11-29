@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../booking/domain/entities/payment.dart';
 
 /// Eventos para el AdminBloc
 abstract class AdminEvent extends Equatable {
@@ -77,4 +78,18 @@ class CreateAdminBookingEvent extends AdminEvent {
         clientPhone,
         clientEmail,
       ];
+}
+
+/// Evento para agregar un pago a una reserva
+class AddPaymentEvent extends AdminEvent {
+  final String bookingId;
+  final Payment payment;
+
+  const AddPaymentEvent({
+    required this.bookingId,
+    required this.payment,
+  });
+
+  @override
+  List<Object?> get props => [bookingId, payment];
 }

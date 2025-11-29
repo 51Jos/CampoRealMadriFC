@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/network_info.dart';
 import '../../domain/entities/booking.dart';
+import '../../domain/entities/payment.dart';
 import '../../domain/entities/time_slot.dart';
 import '../../domain/repositories/booking_repository.dart';
 import '../datasources/booking_remote_datasource.dart';
@@ -168,6 +169,26 @@ class BookingRepositoryImpl implements BookingRepository {
         clientName: clientName,
         clientPhone: clientPhone,
         clientEmail: clientEmail,
+      );
+      return Right(booking);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Booking>> addPayment({
+    required String bookingId,
+    required Payment payment,
+  }) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final booking = await remoteDataSource.addPayment(
+        bookingId: bookingId,
+        payment: payment,
       );
       return Right(booking);
     } catch (e) {

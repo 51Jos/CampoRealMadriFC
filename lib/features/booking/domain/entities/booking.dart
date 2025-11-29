@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'payment.dart';
 
 /// Entidad que representa una reserva
 class Booking extends Equatable {
@@ -18,6 +19,7 @@ class Booking extends Equatable {
   final String? clientName;
   final String? clientPhone;
   final String? clientEmail;
+  final List<Payment> payments;
 
   const Booking({
     required this.id,
@@ -36,9 +38,19 @@ class Booking extends Equatable {
     this.clientName,
     this.clientPhone,
     this.clientEmail,
+    this.payments = const [],
   });
 
   DateTime get endTime => startTime.add(Duration(hours: durationHours));
+
+  /// Total pagado hasta el momento
+  double get totalPaid => payments.fold(0.0, (sum, payment) => sum + payment.amount);
+
+  /// Monto pendiente de pago
+  double get remainingBalance => totalPrice - totalPaid;
+
+  /// Si la reserva está completamente pagada
+  bool get isFullyPaid => remainingBalance <= 0;
 
   @override
   List<Object?> get props => [
@@ -58,6 +70,7 @@ class Booking extends Equatable {
         clientName,
         clientPhone,
         clientEmail,
+        payments,
       ];
 }
 

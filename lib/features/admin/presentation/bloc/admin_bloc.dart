@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../booking/domain/entities/booking.dart';
+import '../../../booking/domain/usecases/add_payment_usecase.dart';
 import '../../../booking/domain/usecases/confirm_booking_usecase.dart';
 import '../../../booking/domain/usecases/create_admin_booking.dart';
 import '../../../booking/domain/usecases/get_all_bookings_usecase.dart';
@@ -13,18 +14,21 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
   final ConfirmBookingUseCase confirmBookingUseCase;
   final RejectBookingUseCase rejectBookingUseCase;
   final CreateAdminBooking createAdminBooking;
+  final AddPaymentUseCase addPaymentUseCase;
 
   AdminBloc({
     required this.getAllBookingsUseCase,
     required this.confirmBookingUseCase,
     required this.rejectBookingUseCase,
     required this.createAdminBooking,
+    required this.addPaymentUseCase,
   }) : super(const AdminInitial()) {
     on<LoadAllBookingsEvent>(_onLoadAllBookings);
     on<ConfirmBookingEvent>(_onConfirmBooking);
     on<RejectBookingEvent>(_onRejectBooking);
     on<FilterBookingsByStatusEvent>(_onFilterByStatus);
     on<CreateAdminBookingEvent>(_onCreateAdminBooking);
+    on<AddPaymentEvent>(_onAddPayment);
   }
 
   Future<void> _onLoadAllBookings(
@@ -226,6 +230,58 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     result.fold(
       (failure) => emit(AdminError(failure.message)),
       (booking) => emit(AdminBookingCreated(booking)),
+    );
+  }
+
+  Future<void> _onAddPayment(
+    AddPaymentEvent event,
+    Emitter<AdminState> emit,
+  ) async {
+    if (state is! AdminBookingsLoaded) return;
+
+    final currentState = state as AdminBookingsLoaded;
+    emit(AdminProcessing(
+      bookings: currentState.bookings,
+      filteredBookings: currentState.filteredBookings,
+      currentFilter: currentState.currentFilter,
+    ));
+
+    final result = await addPaymentUseCase(
+      bookingId: event.bookingId,
+      payment: event.payment,
+    );
+
+    result.fold(
+      (failure) => emit(AdminError(failure.message)),
+      (updatedBooking) {
+        // Actualizar la lista de reservas
+        final updatedBookings = currentState.bookings.map((booking) {
+          return booking.id == updatedBooking.id ? updatedBooking : booking;
+        }).toList();
+
+        final filteredBookings = _filterBookings(
+          updatedBookings,
+          currentState.currentFilter,
+        );
+
+        emit(AdminActionSuccess(
+          message: 'Pago registrado exitosamente',
+          bookings: updatedBookings,
+          filteredBookings: filteredBookings,
+          currentFilter: currentState.currentFilter,
+        ));
+
+        // Volver al estado cargado después de mostrar el mensaje
+        Future.delayed(const Duration(seconds: 2), () {
+          if (!emit.isDone) {
+            emit(AdminBookingsLoaded(
+              bookings: updatedBookings,
+              filteredBookings: filteredBookings,
+              currentFilter: currentState.currentFilter,
+            ));
+          }
+        });
+      },
     );
   }
 }

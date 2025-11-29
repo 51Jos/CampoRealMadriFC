@@ -620,13 +620,11 @@ class _AddPaymentDialog extends StatefulWidget {
 class _AddPaymentDialogState extends State<_AddPaymentDialog> {
   PaymentMethod _selectedMethod = PaymentMethod.efectivo;
   final _amountController = TextEditingController();
-  final _cashReceivedController = TextEditingController();
   String? _changeMessage;
 
   @override
   void dispose() {
     _amountController.dispose();
-    _cashReceivedController.dispose();
     super.dispose();
   }
 
@@ -634,12 +632,12 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
     if (_selectedMethod != PaymentMethod.efectivo) return;
 
     final amount = double.tryParse(_amountController.text) ?? 0;
-    final cashReceived = double.tryParse(_cashReceivedController.text) ?? 0;
+    final remaining = widget.booking.remainingBalance;
 
-    if (cashReceived > amount) {
-      final change = cashReceived - amount;
+    if (amount > remaining) {
+      final change = amount - remaining;
       setState(() {
-        _changeMessage = 'Vuelto: S/ ${change.toStringAsFixed(2)}';
+        _changeMessage = 'Vuelto a dar: S/ ${change.toStringAsFixed(2)}';
       });
     } else {
       setState(() {
@@ -661,7 +659,10 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
     }
 
     final remaining = widget.booking.remainingBalance;
-    if (amount > remaining) {
+
+    // Para efectivo, el monto puede ser mayor (se da vuelto)
+    // Para otros métodos, no puede ser mayor al pendiente
+    if (_selectedMethod != PaymentMethod.efectivo && amount > remaining) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('El monto no puede ser mayor al pendiente (S/ ${remaining.toStringAsFixed(2)})'),
@@ -673,25 +674,21 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
 
     double? cashReceived;
     double? change;
+    double paymentAmount = amount;
 
     if (_selectedMethod == PaymentMethod.efectivo) {
-      cashReceived = double.tryParse(_cashReceivedController.text);
-      if (cashReceived == null || cashReceived < amount) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('El monto recibido debe ser mayor o igual al monto del pago'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
+      // Si el monto es mayor al pendiente, se registra el pendiente y se calcula vuelto
+      if (amount > remaining) {
+        cashReceived = amount;
+        change = amount - remaining;
+        paymentAmount = remaining; // Solo se registra el monto pendiente como pago
       }
-      change = cashReceived - amount;
     }
 
     final payment = Payment(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       method: _selectedMethod,
-      amount: amount,
+      amount: paymentAmount,
       timestamp: DateTime.now(),
       cashReceived: cashReceived,
       change: change,
@@ -747,16 +744,18 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
                 setState(() {
                   _selectedMethod = value!;
                   _changeMessage = null;
-                  _cashReceivedController.clear();
+                  _amountController.clear();
                 });
               },
             ),
             const SizedBox(height: 16),
 
             // Monto del pago
-            const Text(
-              'Monto del pago',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            Text(
+              _selectedMethod == PaymentMethod.efectivo
+                ? 'Monto recibido del cliente'
+                : 'Monto del pago',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -773,51 +772,35 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
                 }
               },
             ),
-            const SizedBox(height: 16),
 
-            // Campo adicional para efectivo
-            if (_selectedMethod == PaymentMethod.efectivo) ...[
-              const Text(
-                'Monto recibido',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _cashReceivedController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  prefixText: 'S/ ',
-                  hintText: '0.00',
+            // Mensaje de vuelto para efectivo
+            if (_selectedMethod == PaymentMethod.efectivo && _changeMessage != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
                 ),
-                onChanged: (_) => _calculateChange(),
-              ),
-
-              if (_changeMessage != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
                         _changeMessage!,
                         style: TextStyle(
                           color: Colors.blue.shade900,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ],
+            const SizedBox(height: 16),
           ],
         ),
       ),

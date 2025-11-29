@@ -563,7 +563,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     children: [
                       const SizedBox(height: 4),
                       Text(
-                        '${booking.date.day}/${booking.date.month}/${booking.date.year} - ${booking.startTime.hour}:00',
+                        '${booking.date.day}/${booking.date.month}/${booking.date.year}',
+                      ),
+                      Text(
+                        '${booking.startTime.hour.toString().padLeft(2, '0')}:00 - ${booking.endTime.hour.toString().padLeft(2, '0')}:00 (${booking.durationHours}h)',
+                        style: const TextStyle(fontSize: 13),
                       ),
                       Text('S/ ${booking.totalPrice.toStringAsFixed(2)}'),
                     ],

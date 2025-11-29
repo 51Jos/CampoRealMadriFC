@@ -228,10 +228,44 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
           .orderBy('date', descending: true)
           .get();
 
-      // Obtener datos de usuario para cada reserva
+      // Recopilar todos los userIds únicos que necesitamos consultar
+      final userIds = <String>{};
+      final bookingDocs = snapshot.docs.map((doc) {
+        final data = doc.data();
+        final isAdminCreated = data['isAdminCreated'] as bool? ?? false;
+        final userId = data['userId'] as String?;
+
+        // Solo agregar userId si no es admin-created y tiene userId válido
+        if (!isAdminCreated && userId != null && userId.isNotEmpty) {
+          userIds.add(userId);
+        }
+
+        return {'doc': doc, 'data': data};
+      }).toList();
+
+      // Hacer una sola consulta batch para obtener todos los usuarios
+      final usersData = <String, Map<String, dynamic>>{};
+      if (userIds.isNotEmpty) {
+        // Firestore limita a 10 elementos en whereIn, dividir en lotes si hay más
+        final userIdsList = userIds.toList();
+        for (var i = 0; i < userIdsList.length; i += 10) {
+          final batch = userIdsList.skip(i).take(10).toList();
+          final usersSnapshot = await firestore
+              .collection('users')
+              .where(FieldPath.documentId, whereIn: batch)
+              .get();
+
+          for (var userDoc in usersSnapshot.docs) {
+            usersData[userDoc.id] = userDoc.data();
+          }
+        }
+      }
+
+      // Construir la lista de reservas con los datos de usuario
       final bookings = <BookingModel>[];
-      for (var doc in snapshot.docs) {
-        final bookingData = doc.data();
+      for (var item in bookingDocs) {
+        final doc = item['doc'] as DocumentSnapshot;
+        final bookingData = item['data'] as Map<String, dynamic>;
         final userId = bookingData['userId'] as String?;
         final isAdminCreated = bookingData['isAdminCreated'] as bool? ?? false;
 
@@ -244,13 +278,12 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
           userName = bookingData['clientName'] as String?;
           userPhone = bookingData['clientPhone'] as String?;
           userEmail = bookingData['clientEmail'] as String?;
-        } else if (userId != null && userId.isNotEmpty) {
-          // Si no es creada por admin y tiene userId, obtener datos del usuario
-          final userDoc = await firestore.collection('users').doc(userId).get();
-          final userData = userDoc.data();
-          userName = userData?['name'] as String?;
-          userPhone = userData?['phone'] as String?;
-          userEmail = userData?['email'] as String?;
+        } else if (userId != null && usersData.containsKey(userId)) {
+          // Usar datos del cache de usuarios
+          final userData = usersData[userId]!;
+          userName = userData['name'] as String?;
+          userPhone = userData['phone'] as String?;
+          userEmail = userData['email'] as String?;
         }
 
         bookings.add(BookingModel.fromJson({

@@ -2,9 +2,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/admin/presentation/bloc/admin_bloc.dart';
 import '../../features/admin/presentation/bloc/admin_event.dart';
+import '../../features/admin/presentation/bloc/statistics_bloc.dart';
+import '../../features/admin/presentation/bloc/statistics_event.dart';
 import '../../features/admin/presentation/pages/admin_create_booking_page.dart';
 import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
 import '../../features/admin/presentation/pages/admin_login_page.dart';
+import '../../features/admin/presentation/pages/statistics_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/company/domain/repositories/company_repository.dart';
 import '../../features/company/presentation/bloc/company_bloc.dart';
@@ -25,6 +28,7 @@ class AppRouter {
   static const String adminLogin = '/admin/login';
   static const String adminDashboard = '/admin/dashboard';
   static const String adminCreateBooking = '/admin/create-booking';
+  static const String adminStatistics = '/admin/statistics';
   static const String companySettings = '/admin/company-settings';
 
   static final GoRouter router = GoRouter(
@@ -99,6 +103,14 @@ class AppRouter {
             BlocProvider(create: (context) => sl<AdminBloc>()),
           ],
           child: const AdminCreateBookingPage(),
+        ),
+      ),
+      GoRoute(
+        path: adminStatistics,
+        name: 'adminStatistics',
+        builder: (context, state) => BlocProvider(
+          create: (context) => sl<StatisticsBloc>()..add(const LoadStatisticsEvent()),
+          child: const StatisticsPage(),
         ),
       ),
       GoRoute(

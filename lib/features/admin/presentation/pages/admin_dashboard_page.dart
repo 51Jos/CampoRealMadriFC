@@ -118,7 +118,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               _selectedNavIndex = 0;
             });
           } else if (index == 1) {
-            context.push('/admin/company-settings').then((_) {
+            context.push('/admin/statistics').then((_) {
               // Resetear índice al volver
               if (mounted) {
                 setState(() {
@@ -127,6 +127,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               }
             });
           } else if (index == 2) {
+            context.push('/admin/company-settings').then((_) {
+              // Resetear índice al volver
+              if (mounted) {
+                setState(() {
+                  _selectedNavIndex = 0;
+                });
+              }
+            });
+          } else if (index == 3) {
             context.read<AuthBloc>().add(SignOutRequested());
             context.go('/admin/login');
           }
@@ -136,6 +145,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
             label: 'Reservas',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Estadísticas',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
@@ -229,6 +243,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 label: Text('Reservas'),
               ),
               NavigationRailDestination(
+                icon: Icon(Icons.bar_chart_outlined),
+                selectedIcon: Icon(Icons.bar_chart),
+                label: Text('Estadísticas'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(Icons.settings_outlined),
                 selectedIcon: Icon(Icons.settings),
                 label: Text('Configuración'),
@@ -237,6 +256,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             selectedIndex: 0,
             onDestinationSelected: (index) {
               if (index == 1) {
+                context.push('/admin/statistics');
+              } else if (index == 2) {
                 context.push('/admin/company-settings');
               }
             },

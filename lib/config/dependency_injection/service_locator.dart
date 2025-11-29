@@ -4,7 +4,12 @@ import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/network_info.dart';
+import '../../features/admin/data/datasources/statistics_remote_datasource.dart';
+import '../../features/admin/data/repositories/statistics_repository_impl.dart';
+import '../../features/admin/domain/repositories/statistics_repository.dart';
+import '../../features/admin/domain/usecases/get_statistics_usecase.dart';
 import '../../features/admin/presentation/bloc/admin_bloc.dart';
+import '../../features/admin/presentation/bloc/statistics_bloc.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -164,6 +169,19 @@ Future<void> initializeDependencies() async {
   // FEATURE: ADMIN
   // ============================================================================
 
+  // Data sources
+  sl.registerLazySingleton<StatisticsRemoteDataSource>(
+    () => StatisticsRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  // Repository
+  sl.registerLazySingleton<StatisticsRepository>(
+    () => StatisticsRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Use cases
+  sl.registerLazySingleton(() => GetStatisticsUseCase(sl()));
+
   // BLoC
   sl.registerFactory(
     () => AdminBloc(
@@ -173,5 +191,9 @@ Future<void> initializeDependencies() async {
       createAdminBooking: sl(),
       addPaymentUseCase: sl(),
     ),
+  );
+
+  sl.registerFactory(
+    () => StatisticsBloc(getStatisticsUseCase: sl()),
   );
 }

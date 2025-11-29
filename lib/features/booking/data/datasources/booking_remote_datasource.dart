@@ -186,7 +186,35 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
         throw Exception('Reserva no encontrada');
       }
 
-      return BookingModel.fromJson({...doc.data()!, 'id': doc.id});
+      final bookingData = doc.data()!;
+      final userId = bookingData['userId'] as String?;
+      final isAdminCreated = bookingData['isAdminCreated'] as bool? ?? false;
+
+      String? userName;
+      String? userPhone;
+      String? userEmail;
+
+      // Si la reserva fue creada por admin, usar datos del cliente
+      if (isAdminCreated) {
+        userName = bookingData['clientName'] as String?;
+        userPhone = bookingData['clientPhone'] as String?;
+        userEmail = bookingData['clientEmail'] as String?;
+      } else if (userId != null && userId.isNotEmpty) {
+        // Si no es creada por admin y tiene userId, obtener datos del usuario
+        final userDoc = await firestore.collection('users').doc(userId).get();
+        final userData = userDoc.data();
+        userName = userData?['name'] as String?;
+        userPhone = userData?['phone'] as String?;
+        userEmail = userData?['email'] as String?;
+      }
+
+      return BookingModel.fromJson({
+        ...bookingData,
+        'id': doc.id,
+        'userName': userName ?? 'Usuario',
+        'userPhone': userPhone,
+        'userEmail': userEmail,
+      });
     } catch (e) {
       throw Exception('Error al obtener reserva: $e');
     }

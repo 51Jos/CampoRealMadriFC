@@ -39,6 +39,9 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
   int _startHour = 8;
   int _endHour = 22;
 
+  // Navegación móvil
+  int _selectedNavIndex = 1;
+
   @override
   void initState() {
     super.initState();
@@ -92,149 +95,237 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
-      body: Row(
-        children: [
-          // NavigationRail lateral
-          NavigationRail(
-            extended: MediaQuery.of(context).size.width > 1200,
-            backgroundColor: Colors.white,
-            elevation: 1,
-            labelType: MediaQuery.of(context).size.width > 1200
-                ? NavigationRailLabelType.none
-                : NavigationRailLabelType.all,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.admin_panel_settings,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                  if (MediaQuery.of(context).size.width > 1200) ...[
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Admin',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ],
+      appBar: isMobile
+          ? AppBar(
+              elevation: 0,
+              backgroundColor: AppColors.primary,
+              title: const Text(
+                'Configuración',
+                style: TextStyle(color: Colors.white),
               ),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => context.go('/admin/dashboard'),
+              ),
+            )
+          : null,
+      body: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+      bottomNavigationBar: isMobile
+          ? NavigationBar(
+              selectedIndex: _selectedNavIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  _selectedNavIndex = index;
+                });
+                if (index == 0) {
+                  context.go('/admin/dashboard');
+                } else if (index == 2) {
+                  context.read<AuthBloc>().add(SignOutRequested());
+                  context.go('/admin/login');
+                }
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard),
+                  label: 'Reservas',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: 'Configuración',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.logout),
+                  label: 'Salir',
+                ),
+              ],
+            )
+          : null,
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return BlocConsumer<CompanyBloc, CompanyState>(
+      listener: (context, state) {
+        if (state is CompanyLoaded) {
+          _loadInfoToControllers(state.companyInfo);
+        } else if (state is CompanyUpdated) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Información actualizada exitosamente'),
+              backgroundColor: Colors.green,
             ),
-            trailing: Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    tooltip: 'Cerrar sesión',
-                    onPressed: () {
-                      context.read<AuthBloc>().add(SignOutRequested());
-                      context.go('/admin/login');
-                    },
+          );
+        } else if (state is CompanyError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        if (state is CompanyLoading) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+
+        return Container(
+          color: Colors.grey.shade50,
+          child: _buildContent(),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Row(
+      children: [
+        // NavigationRail lateral
+        NavigationRail(
+          extended: MediaQuery.of(context).size.width > 1200,
+          backgroundColor: Colors.white,
+          elevation: 1,
+          labelType: MediaQuery.of(context).size.width > 1200
+              ? NavigationRailLabelType.none
+              : NavigationRailLabelType.all,
+          leading: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: const Icon(
+                    Icons.admin_panel_settings,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                if (MediaQuery.of(context).size.width > 1200) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Admin',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          trailing: Expanded(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  tooltip: 'Cerrar sesión',
+                  onPressed: () {
+                    context.read<AuthBloc>().add(SignOutRequested());
+                    context.go('/admin/login');
+                  },
                 ),
               ),
             ),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: Text('Reservas'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: Text('Configuración'),
-              ),
-            ],
-            selectedIndex: 1,
-            onDestinationSelected: (index) {
-              if (index == 0) {
-                context.go('/admin/dashboard');
-              }
-            },
-            selectedIconTheme: const IconThemeData(
-              color: AppColors.primary,
-              size: 28,
-            ),
-            unselectedIconTheme: IconThemeData(
-              color: Colors.grey.shade600,
-              size: 24,
-            ),
-            selectedLabelTextStyle: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelTextStyle: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 12,
-            ),
-            indicatorColor: AppColors.primary.withValues(alpha: 0.1),
           ),
+          destinations: const [
+            NavigationRailDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: Text('Reservas'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: Text('Configuración'),
+            ),
+          ],
+          selectedIndex: 1,
+          onDestinationSelected: (index) {
+            if (index == 0) {
+              context.go('/admin/dashboard');
+            }
+          },
+          selectedIconTheme: const IconThemeData(
+            color: AppColors.primary,
+            size: 28,
+          ),
+          unselectedIconTheme: IconThemeData(
+            color: Colors.grey.shade600,
+            size: 24,
+          ),
+          selectedLabelTextStyle: const TextStyle(
+            color: AppColors.primary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+          unselectedLabelTextStyle: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 12,
+          ),
+          indicatorColor: AppColors.primary.withValues(alpha: 0.1),
+        ),
 
-          const VerticalDivider(thickness: 1, width: 1),
+        const VerticalDivider(thickness: 1, width: 1),
 
-          // Contenido principal
-          Expanded(
-            child: BlocConsumer<CompanyBloc, CompanyState>(
-              listener: (context, state) {
-                if (state is CompanyLoaded) {
-                  _loadInfoToControllers(state.companyInfo);
-                } else if (state is CompanyUpdated) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Información actualizada exitosamente'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else if (state is CompanyError) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.message),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              builder: (context, state) {
-                if (state is CompanyLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
-                }
-
-                return Container(
-                  color: Colors.grey.shade50,
-                  child: Column(
-                    children: [
-                      _buildHeader(),
-                      Expanded(
-                        child: _buildContent(),
-                      ),
-                    ],
+        // Contenido principal
+        Expanded(
+          child: BlocConsumer<CompanyBloc, CompanyState>(
+            listener: (context, state) {
+              if (state is CompanyLoaded) {
+                _loadInfoToControllers(state.companyInfo);
+              } else if (state is CompanyUpdated) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Información actualizada exitosamente'),
+                    backgroundColor: Colors.green,
                   ),
                 );
-              },
-            ),
+              } else if (state is CompanyError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              if (state is CompanyLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                );
+              }
+
+              return Container(
+                color: Colors.grey.shade50,
+                child: Column(
+                  children: [
+                    _buildHeader(),
+                    Expanded(
+                      child: _buildContent(),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

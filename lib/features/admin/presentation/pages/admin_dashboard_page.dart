@@ -28,6 +28,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   String? _currentFilter;
   final _whatsappService = WhatsAppService();
   CompanyInfo? _companyInfo;
+  int _selectedNavIndex = 0;
 
   @override
   void initState() {
@@ -84,13 +85,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               context.read<AdminBloc>().add(const LoadAllBookingsEvent());
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () {
-              context.read<AuthBloc>().add(SignOutRequested());
-              context.go('/admin/login');
-            },
-          ),
         ],
       ),
       body: Column(
@@ -99,16 +93,49 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           Expanded(child: _buildBookingsList()),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await context.push('/admin/create-booking');
-          if (result == true && mounted) {
-            context.read<AdminBloc>().add(const LoadAllBookingsEvent());
+      floatingActionButton: _selectedNavIndex == 0
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final result = await context.push('/admin/create-booking');
+                if (result == true && mounted) {
+                  context.read<AdminBloc>().add(const LoadAllBookingsEvent());
+                }
+              },
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('Nueva Reserva'),
+            )
+          : null,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedNavIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _selectedNavIndex = index;
+          });
+          if (index == 1) {
+            context.push('/admin/company-settings');
+          } else if (index == 2) {
+            context.read<AuthBloc>().add(SignOutRequested());
+            context.go('/admin/login');
           }
         },
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva Reserva'),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Reservas',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Configuración',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.logout),
+            label: 'Salir',
+          ),
+        ],
       ),
     );
   }
@@ -123,6 +150,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           }
         },
         backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Nueva Reserva'),
       ),

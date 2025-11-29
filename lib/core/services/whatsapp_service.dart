@@ -27,25 +27,40 @@ class WhatsAppService {
   /// Construye el mensaje de confirmación
   String _buildConfirmationMessage(Booking booking, [String? mapsLink]) {
     final date = booking.date;
-    final dateStr = '${date.day}/${date.month}/${date.year}';
-    final timeStr = '${booking.startTime.hour}:00';
 
-    final locationSection = mapsLink != null
-        ? '\n📍 Cómo llegar: $mapsLink\n'
-        : '';
+    // Formatear fecha con nombre del día y mes
+    final weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+    final months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+    final weekday = weekdays[date.weekday - 1];
+    final month = months[date.month - 1];
+    final dateStr = '$weekday, ${date.day} $month ${date.year}';
+
+    // Formatear hora de inicio y fin
+    final startHour = booking.startTime.hour.toString().padLeft(2, '0');
+    final endHour = booking.endTime.hour.toString().padLeft(2, '0');
+    final timeStr = '$startHour:00 - $endHour:00';
+
+    // Generar código de reserva (últimos 8 caracteres del ID en mayúsculas)
+    final code = '#${booking.id.toUpperCase().substring(booking.id.length > 8 ? booking.id.length - 8 : 0)}';
 
     return '''
-¡Hola ${booking.userName ?? 'Usuario'}! 👋
+⚽ *RESERVA CONFIRMADA* ⚽
 
-✅ Tu reserva ha sido *CONFIRMADA*
+📍 *Campo:* Campo Deportivo Real Madrid FC
+📅 *Fecha:* $dateStr
+⏰ *Hora:* $timeStr
+⏱️ *Duración:* ${booking.durationHours} hora${booking.durationHours > 1 ? 's' : ''}
+💰 *Total:* S/ ${booking.totalPrice.toStringAsFixed(2)}
 
-📅 Fecha: $dateStr
-⏰ Hora: $timeStr
-⏱️ Duración: ${booking.durationHours}h
-💰 Total: S/ ${booking.totalPrice.toStringAsFixed(2)}$locationSection
-¡Te esperamos en la cancha! ⚽
+📍 *Dirección:* Lima, Perú
+🆔 *Código:* $code
 
-_Sintético Lima_
+📱 *Contacto:* 918817238
+📍 *Cómo llegar:* ${mapsLink ?? 'https://maps.google.com'}
+
+¡Nos vemos en la cancha! 🎉
     ''';
   }
 

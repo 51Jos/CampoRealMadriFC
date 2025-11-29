@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/responsive_layout.dart';
 import '../../domain/entities/statistics.dart';
 import '../bloc/statistics_bloc.dart';
 import '../bloc/statistics_event.dart';
 import '../bloc/statistics_state.dart';
 
-class StatisticsPage extends StatelessWidget {
+class StatisticsPage extends StatefulWidget {
   const StatisticsPage({super.key});
 
   @override
+  State<StatisticsPage> createState() => _StatisticsPageState();
+}
+
+class _StatisticsPageState extends State<StatisticsPage> {
+  int _selectedNavIndex = 1; // Estadísticas es el índice 1
+
+  @override
   Widget build(BuildContext context) {
+    return ResponsiveLayout(
+      mobile: _buildMobileLayout(),
+      desktop: _buildDesktopLayout(),
+    );
+  }
+
+  Widget _buildMobileLayout() {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -29,76 +45,270 @@ class StatisticsPage extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<StatisticsBloc, StatisticsState>(
-        builder: (context, state) {
-          if (state is StatisticsLoading) {
-            return const Center(child: CircularProgressIndicator());
+      body: _buildStatisticsContent(),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedNavIndex,
+        onDestinationSelected: (index) {
+          if (index == 0) {
+            context.go('/admin/dashboard');
+          } else if (index == 1) {
+            // Ya estamos en estadísticas
+            setState(() {
+              _selectedNavIndex = 1;
+            });
+          } else if (index == 2) {
+            context.push('/admin/company-settings');
+          } else if (index == 3) {
+            context.go('/admin/login');
           }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Reservas',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Estadísticas',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Configuración',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.logout),
+            label: 'Salir',
+          ),
+        ],
+      ),
+    );
+  }
 
-          if (state is StatisticsError) {
-            return Center(
+  Widget _buildDesktopLayout() {
+    return Scaffold(
+      body: Row(
+        children: [
+          // NavigationRail lateral
+          NavigationRail(
+            extended: MediaQuery.of(context).size.width > 1200,
+            backgroundColor: Colors.white,
+            elevation: 1,
+            labelType: MediaQuery.of(context).size.width > 1200
+                ? NavigationRailLabelType.none
+                : NavigationRailLabelType.all,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error al cargar estadísticas',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.admin_panel_settings,
+                      color: Colors.white,
+                      size: 28,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    state.message,
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      context.read<StatisticsBloc>().add(const LoadStatisticsEvent());
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Reintentar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                  if (MediaQuery.of(context).size.width > 1200) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Admin',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
-            );
-          }
-
-          if (state is StatisticsLoaded) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<StatisticsBloc>().add(const RefreshStatisticsEvent());
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildBookingStatsSection(context, state.statistics.bookingStats),
-                    const SizedBox(height: 24),
-                    _buildIncomeStatsSection(context, state.statistics.incomeStats),
-                    const SizedBox(height: 24),
-                    _buildPeakHoursSection(context, state.statistics.peakHoursStats),
-                    const SizedBox(height: 24),
-                    _buildWeeklyChartSection(context, state.statistics.bookingStats),
-                  ],
+            ),
+            trailing: Expanded(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.red),
+                    tooltip: 'Cerrar sesión',
+                    onPressed: () {
+                      context.go('/admin/login');
+                    },
+                  ),
                 ),
               ),
-            );
-          }
-
-          return const SizedBox();
-        },
+            ),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard),
+                label: Text('Reservas'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.bar_chart_outlined),
+                selectedIcon: Icon(Icons.bar_chart),
+                label: Text('Estadísticas'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: Text('Configuración'),
+              ),
+            ],
+            selectedIndex: 1,
+            onDestinationSelected: (index) {
+              if (index == 0) {
+                context.go('/admin/dashboard');
+              } else if (index == 2) {
+                context.push('/admin/company-settings');
+              }
+            },
+            selectedIconTheme: const IconThemeData(
+              color: AppColors.primary,
+              size: 28,
+            ),
+            unselectedIconTheme: IconThemeData(
+              color: Colors.grey.shade600,
+              size: 24,
+            ),
+            selectedLabelTextStyle: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelTextStyle: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 12,
+            ),
+          ),
+          const VerticalDivider(thickness: 1, width: 1),
+          // Contenido principal
+          Expanded(
+            child: Column(
+              children: [
+                // AppBar personalizado para desktop
+                Container(
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.shade200,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Estadísticas',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: () {
+                            context.read<StatisticsBloc>().add(const RefreshStatisticsEvent());
+                          },
+                          tooltip: 'Actualizar',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(child: _buildStatisticsContent()),
+              ],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildStatisticsContent() {
+    return BlocBuilder<StatisticsBloc, StatisticsState>(
+      builder: (context, state) {
+        if (state is StatisticsLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state is StatisticsError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+                const SizedBox(height: 16),
+                Text(
+                  'Error al cargar estadísticas',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  state.message,
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    context.read<StatisticsBloc>().add(const LoadStatisticsEvent());
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (state is StatisticsLoaded) {
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<StatisticsBloc>().add(const RefreshStatisticsEvent());
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildBookingStatsSection(context, state.statistics.bookingStats),
+                  const SizedBox(height: 24),
+                  _buildIncomeStatsSection(context, state.statistics.incomeStats),
+                  const SizedBox(height: 24),
+                  _buildPeakHoursSection(context, state.statistics.peakHoursStats),
+                  const SizedBox(height: 24),
+                  _buildWeeklyChartSection(context, state.statistics.bookingStats),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return const SizedBox();
+      },
     );
   }
 

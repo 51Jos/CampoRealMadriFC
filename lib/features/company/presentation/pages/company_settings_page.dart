@@ -29,7 +29,6 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
   late TextEditingController _yapeController;
   late TextEditingController _dayPriceController;
   late TextEditingController _nightPriceController;
-  late TextEditingController _nightStartHourController;
 
   CompanyInfo? _currentInfo;
   final MapController _mapController = MapController();
@@ -38,6 +37,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
   // Horarios
   int _startHour = 8;
   int _endHour = 22;
+  int _nightStartHour = 18;
 
   // Navegación móvil
   int _selectedNavIndex = 1;
@@ -57,7 +57,6 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     _yapeController = TextEditingController();
     _dayPriceController = TextEditingController();
     _nightPriceController = TextEditingController();
-    _nightStartHourController = TextEditingController();
   }
 
   void _loadInfoToControllers(CompanyInfo info) {
@@ -69,9 +68,9 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     _yapeController.text = info.yapeNumber;
     _dayPriceController.text = info.dayPrice.toString();
     _nightPriceController.text = info.nightPrice.toString();
-    _nightStartHourController.text = info.nightStartHour.toString();
     _startHour = info.startHour;
     _endHour = info.endHour;
+    _nightStartHour = info.nightStartHour;
 
     setState(() {
       _selectedLocation = LatLng(info.latitude, info.longitude);
@@ -88,7 +87,6 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
     _yapeController.dispose();
     _dayPriceController.dispose();
     _nightPriceController.dispose();
-    _nightStartHourController.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -429,7 +427,15 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildTextField(_nightStartHourController, 'Hora Inicio Tarifa Noche (0-23)', Icons.access_time, isNumber: true, maxLines: 1),
+                _buildHourSelector(
+                  'Hora Inicio Tarifa Noche',
+                  _nightStartHour,
+                  (hour) {
+                    setState(() {
+                      _nightStartHour = hour;
+                    });
+                  },
+                ),
               ],
             ),
           ),
@@ -446,48 +452,81 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       clipBehavior: Clip.antiAlias,
-      child: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter: _selectedLocation,
-          initialZoom: 15,
-          onTap: (tapPosition, point) {
-            setState(() {
-              _selectedLocation = point;
-            });
-          },
-        ),
+      child: Stack(
         children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.sinteticolima.app',
-          ),
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: _selectedLocation,
-                width: 40,
-                height: 40,
-                child: GestureDetector(
-                  onPanUpdate: (details) {
-                    // Convertir el delta del drag a coordenadas del mapa
-                    final latDelta = details.delta.dy * 0.00001;
-                    final lngDelta = details.delta.dx * 0.00001;
-                    setState(() {
-                      _selectedLocation = LatLng(
-                        _selectedLocation.latitude - latDelta,
-                        _selectedLocation.longitude + lngDelta,
-                      );
-                    });
-                  },
-                  child: const Icon(
-                    Icons.location_on,
-                    color: AppColors.primary,
-                    size: 40,
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _selectedLocation,
+              initialZoom: 15,
+              onTap: (tapPosition, point) {
+                setState(() {
+                  _selectedLocation = point;
+                });
+              },
+              // Habilitar interacción táctil en móvil
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
+              ),
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.sinteticolima.app',
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _selectedLocation,
+                    width: 50,
+                    height: 50,
+                    alignment: Alignment.topCenter,
+                    child: GestureDetector(
+                      onPanUpdate: (details) {
+                        // Convertir el delta del drag a coordenadas del mapa
+                        // Factor de escala ajustado para mejor precisión
+                        final zoom = _mapController.camera.zoom;
+                        final scale = 0.000005 * (15 / zoom);
+                        final latDelta = details.delta.dy * scale;
+                        final lngDelta = details.delta.dx * scale;
+                        setState(() {
+                          _selectedLocation = LatLng(
+                            _selectedLocation.latitude - latDelta,
+                            _selectedLocation.longitude + lngDelta,
+                          );
+                        });
+                      },
+                      child: const Icon(
+                        Icons.location_on,
+                        color: AppColors.primary,
+                        size: 50,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
+          ),
+          // Instrucción para móvil
+          Positioned(
+            top: 8,
+            left: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Toca el mapa o arrastra el marcador para cambiar la ubicación',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ],
       ),
@@ -604,7 +643,7 @@ class _CompanySettingsPageState extends State<CompanySettingsPage> {
         endHour: _endHour,
         dayPrice: double.tryParse(_dayPriceController.text) ?? 0.0,
         nightPrice: double.tryParse(_nightPriceController.text) ?? 0.0,
-        nightStartHour: int.tryParse(_nightStartHourController.text) ?? 18,
+        nightStartHour: _nightStartHour,
         updatedAt: DateTime.now(),
       );
 

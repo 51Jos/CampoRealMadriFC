@@ -927,38 +927,39 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Enviar mensaje por WhatsApp'),
+          title: Row(
+            children: [
+              const Expanded(
+                child: Text('Enviar mensaje por WhatsApp'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(dialogContext),
+                tooltip: 'Cerrar',
+              ),
+            ],
+          ),
           content: const Text('¿Qué tipo de mensaje deseas enviar?'),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(dialogContext, 'confirmation'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Confirmación'),
             ),
-            if (booking.status == BookingStatus.confirmed)
-              ElevatedButton(
-                onPressed: () => Navigator.pop(dialogContext, 'confirmation'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Confirmación'),
-              ),
-            if (booking.status == BookingStatus.cancelled)
-              ElevatedButton(
-                onPressed: () => Navigator.pop(dialogContext, 'rejection'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Rechazo'),
-              ),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: () => Navigator.pop(dialogContext, 'custom'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              child: const Text('Personalizado'),
+              icon: const Icon(Icons.edit),
+              label: const Text('Personalizado'),
             ),
           ],
         );

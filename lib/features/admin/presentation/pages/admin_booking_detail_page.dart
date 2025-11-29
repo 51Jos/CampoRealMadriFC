@@ -7,6 +7,7 @@ import '../../../booking/domain/entities/booking.dart';
 import '../../../booking/domain/entities/payment.dart';
 import '../bloc/admin_bloc.dart';
 import '../bloc/admin_event.dart';
+import '../bloc/admin_state.dart';
 
 /// Página de detalle de reserva para móvil/tablet
 class AdminBookingDetailPage extends StatelessWidget {
@@ -20,21 +21,41 @@ class AdminBookingDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: AppColors.primary,
-        title: const Text(
-          'Detalle de Reserva',
-          style: TextStyle(color: Colors.white),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return BlocBuilder<AdminBloc, AdminState>(
+      builder: (context, state) {
+        // Buscar la reserva actualizada en el estado
+        Booking currentBooking = booking;
+        if (state is AdminBookingsLoaded) {
+          final updatedBooking = state.bookings.firstWhere(
+            (b) => b.id == booking.id,
+            orElse: () => booking,
+          );
+          currentBooking = updatedBooking;
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            elevation: 0,
+            backgroundColor: AppColors.primary,
+            title: const Text(
+              'Detalle de Reserva',
+              style: TextStyle(color: Colors.white),
+            ),
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: _buildContent(context, currentBooking),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContent(BuildContext context, Booking booking) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
             // Estado
             Center(
               child: _buildStatusChip(booking.status),
@@ -164,10 +185,8 @@ class AdminBookingDetailPage extends StatelessWidget {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
+        );
+      }
 
   Widget _buildSection(String title, List<Widget> children) {
     return Column(

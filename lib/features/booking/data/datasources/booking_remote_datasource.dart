@@ -204,18 +204,33 @@ class BookingRemoteDataSourceImpl implements BookingRemoteDataSource {
       final bookings = <BookingModel>[];
       for (var doc in snapshot.docs) {
         final bookingData = doc.data();
-        final userId = bookingData['userId'] as String;
+        final userId = bookingData['userId'] as String?;
+        final isAdminCreated = bookingData['isAdminCreated'] as bool? ?? false;
 
-        // Obtener datos del usuario
-        final userDoc = await firestore.collection('users').doc(userId).get();
-        final userData = userDoc.data();
+        String? userName;
+        String? userPhone;
+        String? userEmail;
+
+        // Si la reserva fue creada por admin, usar datos del cliente
+        if (isAdminCreated) {
+          userName = bookingData['clientName'] as String?;
+          userPhone = bookingData['clientPhone'] as String?;
+          userEmail = bookingData['clientEmail'] as String?;
+        } else if (userId != null && userId.isNotEmpty) {
+          // Si no es creada por admin y tiene userId, obtener datos del usuario
+          final userDoc = await firestore.collection('users').doc(userId).get();
+          final userData = userDoc.data();
+          userName = userData?['name'] as String?;
+          userPhone = userData?['phone'] as String?;
+          userEmail = userData?['email'] as String?;
+        }
 
         bookings.add(BookingModel.fromJson({
           ...bookingData,
           'id': doc.id,
-          'userName': userData?['name'] ?? 'Usuario',
-          'userPhone': userData?['phone'],
-          'userEmail': userData?['email'],
+          'userName': userName ?? 'Usuario',
+          'userPhone': userPhone,
+          'userEmail': userEmail,
         }));
       }
 

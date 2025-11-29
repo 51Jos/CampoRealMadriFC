@@ -653,6 +653,7 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
   PaymentMethod _selectedMethod = PaymentMethod.efectivo;
   final _amountController = TextEditingController();
   String? _changeMessage;
+  bool _isProcessing = false;
 
   @override
   void dispose() {
@@ -678,7 +679,9 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
     }
   }
 
-  void _handleSubmit(BuildContext context) {
+  void _handleSubmit(BuildContext context) async {
+    if (_isProcessing) return;
+
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -703,6 +706,10 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
       );
       return;
     }
+
+    setState(() {
+      _isProcessing = true;
+    });
 
     double? cashReceived;
     double? change;
@@ -731,16 +738,23 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
           payment: payment,
         ));
 
-    Navigator.pop(context);
+    // Esperar un momento para que el BLoC procese y luego cerrar
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final remaining = widget.booking.remainingBalance;
 
-    return AlertDialog(
-      title: const Text('Registrar Pago'),
-      content: SingleChildScrollView(
+    return Stack(
+      children: [
+        AlertDialog(
+          title: const Text('Registrar Pago'),
+          content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -836,19 +850,37 @@ class _AddPaymentDialogState extends State<_AddPaymentDialog> {
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+          actions: [
+            TextButton(
+              onPressed: _isProcessing ? null : () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: _isProcessing ? null : () => _handleSubmit(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: _isProcessing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Registrar'),
+            ),
+          ],
         ),
-        ElevatedButton(
-          onPressed: () => _handleSubmit(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+        if (_isProcessing)
+          Container(
+            color: Colors.black26,
+            child: const Center(
+              child: CircularProgressIndicator(),
+            ),
           ),
-          child: const Text('Registrar'),
-        ),
       ],
     );
   }

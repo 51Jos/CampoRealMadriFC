@@ -237,13 +237,36 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     AddPaymentEvent event,
     Emitter<AdminState> emit,
   ) async {
-    if (state is! AdminBookingsLoaded) return;
+    if (state is! AdminBookingsLoaded &&
+        state is! AdminActionSuccess &&
+        state is! AdminProcessing) return;
 
-    final currentState = state as AdminBookingsLoaded;
+    // Extract bookings from current state
+    List<Booking> bookings = [];
+    String? currentFilter;
+    List<Booking> filteredBookings = [];
+
+    if (state is AdminBookingsLoaded) {
+      final currentState = state as AdminBookingsLoaded;
+      bookings = currentState.bookings;
+      currentFilter = currentState.currentFilter;
+      filteredBookings = currentState.filteredBookings;
+    } else if (state is AdminActionSuccess) {
+      final currentState = state as AdminActionSuccess;
+      bookings = currentState.bookings;
+      currentFilter = currentState.currentFilter;
+      filteredBookings = currentState.filteredBookings;
+    } else if (state is AdminProcessing) {
+      final currentState = state as AdminProcessing;
+      bookings = currentState.bookings;
+      currentFilter = currentState.currentFilter;
+      filteredBookings = currentState.filteredBookings;
+    }
+
     emit(AdminProcessing(
-      bookings: currentState.bookings,
-      filteredBookings: currentState.filteredBookings,
-      currentFilter: currentState.currentFilter,
+      bookings: bookings,
+      filteredBookings: filteredBookings,
+      currentFilter: currentFilter,
     ));
 
     final result = await addPaymentUseCase(
@@ -255,20 +278,20 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
       (failure) => emit(AdminError(failure.message)),
       (updatedBooking) {
         // Actualizar la lista de reservas
-        final updatedBookings = currentState.bookings.map((booking) {
+        final updatedBookings = bookings.map((booking) {
           return booking.id == updatedBooking.id ? updatedBooking : booking;
         }).toList();
 
-        final filteredBookings = _filterBookings(
+        final updatedFilteredBookings = _filterBookings(
           updatedBookings,
-          currentState.currentFilter,
+          currentFilter,
         );
 
         emit(AdminActionSuccess(
           message: 'Pago registrado exitosamente',
           bookings: updatedBookings,
-          filteredBookings: filteredBookings,
-          currentFilter: currentState.currentFilter,
+          filteredBookings: updatedFilteredBookings,
+          currentFilter: currentFilter,
         ));
 
         // Volver al estado cargado después de mostrar el mensaje
@@ -276,8 +299,8 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
           if (!emit.isDone) {
             emit(AdminBookingsLoaded(
               bookings: updatedBookings,
-              filteredBookings: filteredBookings,
-              currentFilter: currentState.currentFilter,
+              filteredBookings: updatedFilteredBookings,
+              currentFilter: currentFilter,
             ));
           }
         });
